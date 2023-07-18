@@ -1,0 +1,63 @@
+figcaption {
+	font-weight: bold;
+}
+
+textarea {
+	border-width: 1px;
+	padding: 2px;
+}
+
+#container {
+	height: 100vh;
+}
+
+.raised-title {
+	vertical-align: 0.5ex;
+	margin-right: -0.05em;
+}
+
+#chat {
+	flex-shrink: 1;
+	overflow-x: auto;
+	overflow-y: scroll;
+}
+
+.chat {
+	line-height: 1.4;
+}
+
+.chat iframe {
+	border-width: 0px;
+	max-width: 100%;
+}
+
+.chat img {
+	max-width: 100%;
+}
+
+.iframe-container {
+	text-align: center;
+	white-space: normal;
+}
+
+.chat pre {
+	display: inline;
+	font-family: var(--font-family-sans-serif);
+	white-space: pre-wrap;
+}
+
+.system-message {
+	font-style: italic;
+}
+
+.user-id {
+	font-weight: bold;
+}
+
+.chat .user-id {
+	vertical-align: top;
+}
+
+#message {
+	resize: none;
+}

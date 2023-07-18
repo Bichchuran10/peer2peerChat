@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css?family=Open+Sans:600i');
+
+button:disabled img {
+	filter: grayscale(1);
+}
+
+label {
+	margin-bottom: 0.25rem;
+	margin-top: 0.25rem;
+}
+
+pre {
+	font-size: 100%;
+}
+
+.nav-item {
+	font-weight: bold;
+}
+
+.btn-border {
+	border-color: DarkGray;
+}
+
+.display-3 {
+	font-family: "Open Sans", sans-serif;
+}
+
+.jumbotron {
+	padding-top: 0.5rem;
+	padding-bottom: 1.5rem;
+}
+
+.lead {
+	margin-left: 1.5rem;
+}
+
+.bg-light {
+	background-color: hsl(188, 50%, 90%)!important;
+}
+
+.app-container {
+	margin: 0 auto;
+	max-width: 800px;
+}
