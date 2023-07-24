@@ -137,6 +137,9 @@ class PeerGroup extends EventTarget {
 			@type {string}
 		*/
     var userID;
+    console.log("CONSTRUCTORRRRRRRRRRRR userID : ", userID);
+    //console.log("CONSTRUCTORRRRRRRRRRRR myUserID : ", myUserID);
+    // var sessionsHere = [];
 
     /**	Maps from randomized peer names to [DataConnection]{@linkcode https://elizabethhudnott.github.io/peerjs-groups/lib/doc/peer.html#dataconnection} objects.
 			Records peers that are connected to this peer and belong to the peer group.
@@ -296,6 +299,7 @@ class PeerGroup extends EventTarget {
         isAdmin:
           usersToPeers.get(escapeHTML(userID)) === sessionID ? true : false,
         isPrivate: false,
+        messageTime: Date.now(),
       });
       me.dispatchEvent(event);
     }
@@ -410,224 +414,94 @@ class PeerGroup extends EventTarget {
 			lost. Not called if this peer isn't a member of a peer group or if the
 			disconnect() function has been invoked. **/
 
-    // function connectionClosed() {
-    //   console.log("connectionClosed:", peer);
-
-    //   var label = this.label;
-    //   var peerName = this.peer;
-    //   var disconnectedUser, event;
-
-    //   if (label === userID) {
-    //     disconnectedUser = peersToUsers.get(peerName);
-    //   } else {
-    //     disconnectedUser = label;
-    //   }
-
-    //   connections.delete(peerName);
-
-    //   console.log("what is peersToUsers", peersToUsers);
-    //   console.log("what is usersToPeers", usersToPeers);
-    //   console.log(
-    //     "checkkkkkkkk : ",
-    //     usersToPeers.get(escapeHTML(disconnectedUser))
-    //   );
-    //   console.log("remaining connections", connections);
-    //   var connectedUserIDs = Array.from(me.userIDs);
-    //   console.log("connecteduserIDs: ", connectedUserIDs);
-
-    //   if (disconnectedUser !== undefined) {
-    //     event = createEvent("userleft", {
-    //       sessionID: sessionID,
-    //       userID: escapeHTML(disconnectedUser),
-    //       isAdmin: usersToPeers.get(escapeHTML(disconnectedUser)) === sessionID,
-    //       isPrivate: false,
-    //     });
-    //     me.dispatchEvent(event);
-    //   }
-
-    //   if (usersToPeers.get(escapeHTML(disconnectedUser)) === sessionID) {
-    //     console.log("Admin left. Creating new sessions for remaining users");
-
-    //     // Create an array to hold the sessions and their timestamps
-    //     var sessions = [];
-
-    //     // Create new groups for the remaining users and store their session IDs and timestamps
-    //     for (let i = 0; i < connectedUserIDs.length; i++) {
-    //       if (connectedUserIDs[i] !== disconnectedUser) {
-    //         var newSessionID = generateUniqueSessionID();
-    //         var timestamp = Date.now();
-
-    //         initializeNetworking();
-    //         group.connect(newSessionID, connectedUserIDs[i]);
-
-    //         var message = `A new group has been created. Session ID: ${newSessionID}, Timestamp: ${timestamp}`;
-
-    //         // Store the session ID and timestamp in the sessions array
-    //         sessions.push({ sessionID: newSessionID, timestamp: timestamp });
-
-    //         // Dispatch the event to the user
-    //         var event = createEvent("message", {
-    //           sessionID: newSessionID,
-    //           userID: connectedUserIDs[i],
-    //           isPrivate: false,
-    //           message: message,
-    //           timestamp: timestamp,
-    //         });
-    //         me.dispatchEvent(event);
-    //       }
-
-    // 	  connectedUserIDs.pop()
-    // 	  console.log('after pop',connectedUserIDs)
-    //     }
-
-    //     // // Now you have the sessionTimestamps hash map that contains the sessions and their timestamps
-    //     // console.log(sessionTimestamps);
-    //   }
-
-    //   //end of forlooppppp
-    // }
     function connectionClosed() {
-      console.log("connectionClosed:", peer);
-
+      console.log("inside connectionClosed : ", peer);
       var label = this.label;
       var peerName = this.peer;
       var disconnectedUser, event;
 
+      console.log("the label :", label);
+      console.log("the peerName :", peerName);
+      console.log("INITIAL DISCONNECTED USER", disconnectedUser);
+      console.log("INITIAL EVENT", event);
+
       if (label === userID) {
         disconnectedUser = peersToUsers.get(peerName);
+        console.log("iffffff disconnectedUser", disconnectedUser);
       } else {
         disconnectedUser = label;
+        console.log("else disconnectedUser", disconnectedUser);
       }
 
-      connections.delete(peerName);
+      console.log("NOW DISCONNECTED USER", disconnectedUser);
 
-      console.log("what is peersToUsers", peersToUsers);
-      console.log("what is usersToPeers", usersToPeers);
-      console.log(
-        "checkkkkkkkk : ",
-        usersToPeers.get(escapeHTML(disconnectedUser))
-      );
-      console.log("remaining connections", connections);
+      console.log("the peerName:", peerName);
+      connections.delete(peerName);
+      // console.log("initial sessions", sessionsHere);
+
       var connectedUserIDs = Array.from(me.userIDs);
       console.log("connecteduserIDs: ", connectedUserIDs);
-
+      var adminAdmin =
+        usersToPeers.get(escapeHTML(disconnectedUser)) === sessionID;
       if (disconnectedUser !== undefined) {
         event = createEvent("userleft", {
           sessionID: sessionID,
           userID: escapeHTML(disconnectedUser),
           isAdmin: usersToPeers.get(escapeHTML(disconnectedUser)) === sessionID,
+          adminLeft: (function () {
+            if (adminAdmin) {
+              console.log(`admin-${disconnectedUser}  left`);
+            } else {
+              console.log(`${disconnectedUser} left`);
+            }
+          })(),
           isPrivate: false,
         });
         me.dispatchEvent(event);
-      }
-      // Initialize sessionTimestamps object
-      // var sessionTimestamps = {};
 
-      if (usersToPeers.get(escapeHTML(disconnectedUser)) === sessionID) {
-        console.log("Admin left. Creating new sessions for remaining users");
+        console.log("thissssssssssss", this);
 
-        // initializeNetworking();
-        // let newSessionID = generateUniqueSessionID();
-        // let timestamp = Date.now();
-        peer.disconnect();
+        // if (adminAdmin) {
+        //   console.log("peeerrrrr", peer);
+        //   // console.log("peer.disconnect() = ", this.disconnect);
 
-        // // Store the new session ID and its timestamp
-        // sessionTimestamps[newSessionID] = timestamp;
+        //   // peer.disconnect();
 
-        // group.connect(newSessionID, connectedUserIDs[0]);
-        // function adminDisconnect() {
-        //   console.log("inside adminDisconnect");
-        //   for (const connection of connections.values()) {
-        //     connection.off("close", connectionClosed);
-        //     connection.close();
-        //   }
-        //   // if (peer !== undefined) {
-        //   //   peer.destroy();
-        //   // }
-        //   peersToUsers.clear();
-        //   usersToPeers.clear();
-        //   tryingToConnect.clear();
-        //   acceptedUsers.clear();
-        //   rejectedUsers.clear();
+        //   console.log("RECONNECTTTTTTT");
+
+        //   // console.log("peer.reconnect() = ", this.reconnect);
+        //   // group.connect(sessionID, userID); //try it later
         // }
-        // console.log("reconnecting ....");
-        // // peer.reconnect();
-        // group.connect(sessionID,connectedUserIDs[0])
+        if (adminAdmin) {
+          console.log("peeerrrrr", peer);
+          // console.log("peer.disconnect() = ", this.disconnect);
 
-        // group.connect(sessionID, connectedUserIDs[0]);
+          peer.disconnect();
 
-        // connectedUserIDs.pop();
-        // setTimeout(() => {
-        //   console.log("after 8 seconds");
-        //   for (let i = 1; i < connectedUserIDs.length; i++) {
-        //     if (connectedUserIDs[i] !== disconnectedUser) {
-        //       //   var newSessionID = generateUniqueSessionID();
-        //       //   var timestamp = Date.now();
+          console.log("RECONNECTTTTTTT");
 
-        //       //   initializeNetworking();
-        //       group.connect(sessionID, connectedUserIDs[i]);
-        //     }
-        //     connectedUserIDs.pop();
-        //     console.log("after pop", connectedUserIDs);
-        //   }
-        // }, 8000);
-        //   let message = `a new group has been created by ${connectedUserIDs[0]} at ${timestamp}`;
-        //   // Dispatch the event to the user
-        //   var event = createEvent("message", {
-        //     sessionID: newSessionID,
-        //     userID: connectedUserIDs[0],
-        //     isPrivate: false,
-        //     message: message,
-        //     timestamp: timestamp,
-        //   });
-        //   console.log("the event to be dispatched ", event);
-        //   me.dispatchEvent(event);
-        // }
-        // console.log("session timestamps : ", sessionTimestamps);
-        //peer.reconnect(connectedUserIDs[0]);
-        peer.reconnect();
-
-        // // Now you have the sessionTimestamps hash map that contains the sessions and their timestamps
-        // console.log(sessionTimestamps);
+          // console.log("peer.reconnect() = ", this.reconnect);
+          // group.connect(sessionID, userID); //try it later
+          setTimeout(() => {
+            console.log("after 8 sec reconnect will run");
+            peer.reconnect();
+          }, 8000);
+        }
       }
-    }
-
-    function generateUniqueSessionID() {
-      // Define the length of the session ID
-      const length = 10;
-
-      // Create a pool of characters from which to generate the session ID
-      const characters =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-      let sessionID = "";
-
-      // Generate a random string of characters for the session ID
-      for (let i = 0; i < length; i++) {
-        const randomIndex = Math.floor(Math.random() * characters.length);
-        sessionID += characters.charAt(randomIndex);
-      }
-
-      console.log("will return this session ID", sessionID);
-
-      return sessionID;
-    }
-
-    function newSession(sessionIDToJoin, connectedUserID) {
-      console.log("inside new session session: ", sessionIDToJoin);
-      console.log("inside new session connectedUserID: ", connectedUserID);
-      //   peer.reconnect();
-      peer.connect(sessionIDToJoin, connectedUserID);
-      //   peer.connect(sessionIDToJoin, connectedUserID);
     }
 
     /**	Closes all existing connections and resets the state of the PeerGroup object. */
     function disconnect() {
+      console.log("insideeee peerGroup disconnect ");
       for (const connection of connections.values()) {
         connection.off("close", connectionClosed);
+        console.log("closing connectionn......");
         connection.close();
       }
+
+      console.log("disconnection", peer);
       if (peer !== undefined) {
+        console.log("destroying peer......", peer);
         peer.destroy();
       }
       peersToUsers.clear();
@@ -677,10 +551,17 @@ class PeerGroup extends EventTarget {
     /**	Configures this peer to act as the peer group leader. */
     function createSession() {
       if (peer !== undefined) {
-        peer.destroy();
+        console.log(
+          " create Session peer not undefined then hellooo peer",
+          peer
+        );
+        peer.destroy(); //destroys first user's peer idddd...
+
+        console.log("peer destroy ..disconnect() gets executed");
       }
       console.log("creaaeae sessid", sessionID);
       console.log("creaaeae opppppp", options);
+      console.log("before new peer :=======", peer);
       peer = new Peer(sessionID, options);
 
       console.log("peer");
@@ -764,6 +645,7 @@ class PeerGroup extends EventTarget {
           }
         });
       });
+      console.log("should i return something ...");
     }
 
     /**	Attempts to connect to a peer group, or creates the group if it doesn't exist yet.
@@ -771,13 +653,20 @@ class PeerGroup extends EventTarget {
 			@param {string} myUserID The identifier this peer would like to be known by.
 	**/
 
-    this.connect = function (sessionIDToJoin, myUserIDr) {
-      console.log("at first sessionIDtoJoin", sessionIDToJoin);
-      console.log("at first userIDtoJoin", myUserID);
-
+    // this.connect = function (sessionIDToJoin, myUserID) {
+    this.connect = function (sessionIDToJoin) {
+      // console.log("at first sessionIDtoJoin", sessionIDToJoin);
+      // console.log("at first userIDtoJoin", myUserID);
+      // console.log("abcd is : ", abcd);
       var firstConnection;
+      //console.log("disconnect is not called:")
 
-      disconnect();
+      console.log("user ID is = : ", userID);
+      // console.log("someID is =", someID);
+      // console.log("uiddddddd ", uid);
+      console.log("myuser ID is = : ", myUserID);
+
+      disconnect(); //let's not call this
       sessionID = sessionIDToJoin;
       userID = myUserID;
       joined = false;
@@ -819,7 +708,10 @@ class PeerGroup extends EventTarget {
         });
 
         peer.on("open", function () {
-          console.log("trying to connect to sessionID");
+          console.log("trying to connect to sessionID ", sessionID);
+          console.log("userID is ", userID);
+          console.log("the peer is ", peer);
+          console.log("the myUserID is ", myUserID);
           firstConnection = peer.connect(sessionID, {
             label: userID,
             reliable: true,

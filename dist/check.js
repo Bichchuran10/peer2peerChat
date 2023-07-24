@@ -1,16 +1,9 @@
-function f() {
-  setTimeout(() => {
-    console.log("helllooooo after 5 sec");
-    for (let i = 0; i < 5; i++) {
-      console.log(i);
-    }
-  }, 10000);
-}
+// console.log(myId);
 
-f();
-// setTimeout(() => {
-//   console.log("helllooooo after 5 sec");
-//   for (let i=0; i<5; i++){
-//     console.log(i);
-//   }
-// }, 5000);
+// var myId=10;
+
+// iD = 100;
+// console.log("myssss", myUserID);
+console.log("myssss", iD);
+
+var iD = 100;
