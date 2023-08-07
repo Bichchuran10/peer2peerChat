@@ -207,6 +207,10 @@ class PeerGroup extends EventTarget {
       PRIVATE_MSG: 4,
       /**	Sent when a peer is forcefully denied membership of the peer group. */
       CONNECT_ERROR: 5,
+
+      ADMIN_MSG: 6,
+
+      ACKNOWLEDGED_MSG: 7,
     });
 
     /**	@typedef Message
@@ -244,6 +248,7 @@ class PeerGroup extends EventTarget {
 
     /**	Creates a PeerGroupEvent. */
     function createEvent(type, properties) {
+      console.log("peer in createEvent= ", peer);
       console.log("inside createEvent peer.id : ", peer.id);
       console.log("inside createEvent sessionid : ", sessionID);
       console.log("inside createEvent type : ", type);
@@ -251,8 +256,53 @@ class PeerGroup extends EventTarget {
       var isAdmin = peer.id === sessionID && sessionID !== undefined;
 
       console.log("inside createEvent isAdmin", isAdmin);
+
+      // if (isAdmin) {
+      //   sendMessageFromAdmin(isAdmin);
+      // }
+
       return new PeerGroupEvent(type, isAdmin, properties);
     }
+
+    function sendMessageFromAdmin(isAdmin) {
+      // if (isAdmin) {
+      setInterval(() => {
+        console.log("connections=", connections);
+        console.log("connections.values() is", connections.values());
+        let membersPresent = connections.size;
+
+        console.log("the mem", membersPresent);
+        if (membersPresent === 0) {
+          return;
+        } else {
+          send(makeMessage(MsgType.ADMIN_MSG, "connected y'all"));
+        }
+      }, 7000);
+      // }
+    }
+
+    function sendMessageFromNonAdmin(person) {
+      console.log("the person to send=", person);
+      // console.log(send);
+      send(makeMessage(MsgType.ACKNOWLEDGED_MSG, "received from admin"));
+    }
+    //   person.send(makeMessage(MsgType.ACKNOWLEDGED_MSG, "received from admin"));
+
+    //   // setInterval(() => {
+    //   //   // console.log("connections non admin=", connections);
+    //   //   // console.log("con values", connections.values);
+    //   //   onlySend(
+    //   //     makeMessage(MsgType.ACKNOWLEDGED_MSG, "received from admin"),
+    //   //     person
+    //   //   );
+    //   // }, 9000);
+    // }
+
+    // function onlySend(message, person) {
+    //   console.log("inside onlySend", message);
+    //   console.log("inside onlySend", person);
+    //   person
+    // }
 
     /**	Raises an error.
 			@param {Error} error The error that has occurred.
@@ -284,6 +334,7 @@ class PeerGroup extends EventTarget {
         isAdmin:
           usersToPeers.get(escapeHTML(userID)) === sessionID ? true : false,
         isPrivate: true,
+        peerID: peer.id,
       });
       me.dispatchEvent(event);
     }
@@ -323,12 +374,18 @@ class PeerGroup extends EventTarget {
 		*/
     function send(message) {
       console.log("send function , message is : ", message);
+      console.log("connections00 :=", connections);
       console.log("connections values : ", connections.values());
+
+      // if (connections.values().length === 0) {
+      //   return;
 
       for (const connection of connections.values()) {
         console.log("connection : ", connection);
 
         connection.send(message);
+        // console.log("WHAT IS CONNECTION.SEND", connection.send());
+        console.log("message has been sent..");
       }
     }
 
@@ -339,6 +396,7 @@ class PeerGroup extends EventTarget {
     function sendIdentity(connection) {
       console.log("executing sendIdentity", connection);
       connection.send(makeMessage(MsgType.IDENTIFY, userID));
+      console.log("done executing identity....");
     }
 
     /**	Called when this peer receives a message from another peer.
@@ -365,7 +423,11 @@ class PeerGroup extends EventTarget {
         case MsgType.IDENTIFY:
           //Record the user ID of another peer.
           var remoteUserID = message.data;
+
+          console.log("remoteUserID=", remoteUserID);
+
           var escapedUserID = escapeHTML(remoteUserID);
+          console.log("escapedUserID=", escapedUserID);
           peersToUsers.set(this.peer, remoteUserID);
           usersToPeers.set(escapedUserID, this.peer);
           tryingToConnect.delete(this.peer);
@@ -383,6 +445,17 @@ class PeerGroup extends EventTarget {
           break;
         case MsgType.CONNECT_ERROR:
           //We were either refused permission to join the peer group or kicked out.
+          console.log("msgType......");
+          group.disconnect();
+          console.log("group.disconnect gets executed here tooo....");
+          disconnected();
+          let chatWindow = $("#chat");
+          chatWindow.append(`
+    	<div class="chat system-message">
+    		<span class="user-id">${myUserID}</span>
+    		has left the conversation.
+    	</div>
+    `);
           event = createEvent("ejected", {
             sessionID: sessionID,
             userID: userID,
@@ -407,8 +480,52 @@ class PeerGroup extends EventTarget {
             isPrivate: message.type === MsgType.PRIVATE_MSG,
           });
           me.dispatchEvent(event);
+          break;
+        case MsgType.ADMIN_MSG:
+          event = createEvent("adminMessage", {
+            sessionID: sessionID,
+            userID: escapeHTML(getUserID(this)),
+            receivedBy: myUserID,
+            isAdmin:
+              usersToPeers.get(escapeHTML(getUserID(this))) !== sessionID
+                ? true
+                : false,
+            message: message.data,
+            isPrivate: message.type === MsgType.PRIVATE_MSG,
+          });
+          me.dispatchEvent(event);
+          break;
+        case MsgType.ACKNOWLEDGED_MSG:
+          event = createEvent("acknowledged", {
+            sessionID: sessionID,
+            userID: escapeHTML(getUserID(this)),
+            receivedBy: myUserID,
+            isAdmin:
+              usersToPeers.get(escapeHTML(getUserID(this))) == sessionID
+                ? true
+                : false,
+            message: message.data,
+            isPrivate: message.type === MsgType.PRIVATE_MSG,
+          });
+          me.dispatchEvent(event);
       }
     }
+
+    // function acknowledgement(isAdmin) {
+    //   // if (!isAdmin) {
+    //   // setInterval(() => {
+    //     console.log("INSIDE acknowledgement");
+    //     // console.log("connections=", connections);
+    //     // console.log("connections.values() is", connections.values());
+    //     // let membersPresent = connections.size;
+
+    //     // console.log("the mem", membersPresent);
+    //     // if (membersPresent === 0) {
+    //     //   return;
+    //     // } else {
+    //     send(makeMessage(MsgType.ACKNOWLEDGED, "admin message received"));
+    //   // }, 3000);
+    // }
 
     /**	Called when this peer's connection to another member of the peer group is
 			lost. Not called if this peer isn't a member of a peer group or if the
@@ -422,6 +539,7 @@ class PeerGroup extends EventTarget {
 
       console.log("the label :", label);
       console.log("the peerName :", peerName);
+      console.log("the userid", userID);
       console.log("INITIAL DISCONNECTED USER", disconnectedUser);
       console.log("INITIAL EVENT", event);
 
@@ -443,18 +561,20 @@ class PeerGroup extends EventTarget {
       console.log("connecteduserIDs: ", connectedUserIDs);
       var adminAdmin =
         usersToPeers.get(escapeHTML(disconnectedUser)) === sessionID;
+      console.log("admin left", adminAdmin);
       if (disconnectedUser !== undefined) {
         event = createEvent("userleft", {
           sessionID: sessionID,
           userID: escapeHTML(disconnectedUser),
           isAdmin: usersToPeers.get(escapeHTML(disconnectedUser)) === sessionID,
-          adminLeft: (function () {
-            if (adminAdmin) {
-              console.log(`admin-${disconnectedUser}  left`);
-            } else {
-              console.log(`${disconnectedUser} left`);
-            }
-          })(),
+          locationID: myLocationID,
+          // adminLeft: (function () {
+          //   if (adminAdmin) {
+          //     console.log(`admin-${disconnectedUser}  left`);
+          //   } else {
+          //     console.log(`${disconnectedUser} left`);
+          //   }
+          // })(),
           isPrivate: false,
         });
         me.dispatchEvent(event);
@@ -490,8 +610,22 @@ class PeerGroup extends EventTarget {
       }
     }
 
+    // peer.on("close", connectionClosed); // added now
+    // // peer.on("disconnected", function () {
+    // //     //added now
+    // //     console.log("disssssss");
+    // //     group.disconnect();
+    // //   });
+
     /**	Closes all existing connections and resets the state of the PeerGroup object. */
     function disconnect() {
+      // peer.on("close", connectionClosed); // added now
+      // peer.on("close", connectionClosed); // added now
+      // // peer.on("disconnected", function () {
+      // //     //added now
+      // //     console.log("disssssss");
+      // //     group.disconnect();
+      // //   });
       console.log("insideeee peerGroup disconnect ");
       for (const connection of connections.values()) {
         connection.off("close", connectionClosed);
@@ -530,6 +664,7 @@ class PeerGroup extends EventTarget {
       });
       connection.on("open", function () {
         connections.set(peerName, connection);
+        console.log("connection on open checking connections = ", connections);
       });
       connection.on("close", connectionClosed);
     }
@@ -566,6 +701,7 @@ class PeerGroup extends EventTarget {
 
       console.log("peer");
       console.log(peer);
+      
       peer.on("error", function (error) {
         if (error.type === "unavailable-id") {
           console.log("unavailable-idddd error");
@@ -583,10 +719,10 @@ class PeerGroup extends EventTarget {
       });
 
       peer.on("connection", function (connection) {
-        console.log("just checking it here");
+        console.log("just checking it here in connection");
         connection.on("open", function () {
           //Rejected users are not welcome.
-          console.log("here tooooo");
+          console.log("here tooooo in connection open");
           var newUserID = connection.label;
           if (rejectedUsers.has(newUserID)) {
             rejectConnection(
@@ -645,8 +781,34 @@ class PeerGroup extends EventTarget {
           }
         });
       });
+
+      // peer.on("close", connectionClosed); // added now
+      // peer.on("disconnected", function () {
+      //   //added now
+      //   console.log("disssssss");
+      //   group.disconnect();
+      // });
+
       console.log("should i return something ...");
     }
+
+    this.acknowledgement = function acknowledgement(person) {
+      console.log("inside this.acknowledgement=", person);
+      sendMessageFromNonAdmin(person);
+      // if (!isAdmin) {
+      // setInterval(() => {
+      //   console.log("INSIDE acknowledgement");
+      // console.log("connections=", connections);
+      // console.log("connections.values() is", connections.values());
+      // let membersPresent = connections.size;
+
+      // console.log("the mem", membersPresent);
+      // if (membersPresent === 0) {
+      //   return;
+      // } else {
+      //   send(makeMessage(MsgType.ACKNOWLEDGED, "admin message received"));
+      // }, 5000);
+    };
 
     /**	Attempts to connect to a peer group, or creates the group if it doesn't exist yet.
 			@param {string} sessionIDToJoin The name of the peer group to try to join.
@@ -781,6 +943,8 @@ class PeerGroup extends EventTarget {
 			application to join a peer group.
 		*/
     this.disconnect = function () {
+      console.log("peer group this.disconnect()");
+
       disconnect();
     };
 
@@ -839,10 +1003,15 @@ class PeerGroup extends EventTarget {
       }
     };
 
+    // this.acknowledgement=function (){
+
+    // }
+
     /**	Sends a message to all members of the peer group.
 			@param {any} data The data to send.
 		*/
     this.send = function (data) {
+      console.log("SENDINGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG.....");
       send(makeMessage(MsgType.DATA, data));
     };
 
@@ -877,6 +1046,10 @@ class PeerGroup extends EventTarget {
         return userIDs;
       },
     });
+
+    // this.acknow = function () {
+    //   send(makeMessage(MsgType.ACKNOWLEDGED, "acknowwwl"));
+    // };
 
     this.addEventListener = function (type, listener, options) {
       if (type === "joinrequest") {

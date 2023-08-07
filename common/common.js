@@ -7,6 +7,11 @@ var connectButton = $("#connect-btn");
 
 var connected = false;
 var group, myUserID;
+// var roomEntity = new Map();
+// var sessionID;
+var myLocationID, sessionID;
+// var myLocationID, sessionID;
+// var totalMembers;
 
 function parseSignallingURL(url) {
   //Format: API-key@hostname:port/path, preceded by wss:// for an encrypted connection.

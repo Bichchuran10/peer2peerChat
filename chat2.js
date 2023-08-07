@@ -12,11 +12,7 @@ var placeLocation = document.getElementById("location-id");
 // var myLocationInput = myLocation.querySelector("input");
 var myLocationInput;
 var confirmationAction;
-var publicCheck;
-var someid;
-// var heartbeatInterval;
-// let inactivityTimeout;
-// const inactivityDuration = 60000; // 60 seconds of inactivity before triggering disconnection
+var intermediateGroup;
 
 const imageFileExtensions = /\.(bmp|apng|gif|ico|jpg|jpeg|png|svg|webp)$/;
 const youTubeURL = /^http(s)?:\/\/www.youtube.com\/watch\?v=([^&]+)(&(.*))?$/;
@@ -27,8 +23,6 @@ var joinRequests = [];
 // var sessions = [];
 
 function processJoinRequest() {
-  console.log("join request.....");
-  console.log("join req arr=", joinRequests);
   if (modalDisplayed) {
     return;
   }
@@ -43,7 +37,6 @@ function processJoinRequest() {
 }
 
 $("#accept-join").on("click", function (event) {
-  console.log("acept join,,.....");
   var userID = joinRequests.shift();
   group.acceptUser(userID);
   processJoinRequest();
@@ -56,7 +49,6 @@ $("#reject-join").on("click", function (event) {
 });
 
 function disconnected() {
-  console.log("function disconnected.......");
   connected = false;
   sessionBadge.css("visibility", "hidden");
   connectButton.html("Connect");
@@ -66,36 +58,21 @@ function disconnected() {
   userList.children(":not([value=everyone])").remove();
 }
 
-connectButton.on("click", async function (event) {
-  console.log("clicked connect");
+connectButton.on("click", function (event) {
   alertArea.html("");
 
   if (connected) {
     event.preventDefault();
     group.disconnect();
-
-    console.log("some id ", someid);
-    console.log("some id ", myUserID);
-    console.log("some id ", myLocationID);
-    // console.log("some id ", sessionID); //undefined
-    // console.log("hahhahhahhah==========", myUserID);
-    // console.log("hahhahhahhah==========", myLocationID);
-    // console.log("hahhahhahhah==========", sessionID);
     disconnected();
-    if (myLocationID) {
-      console.log("since it is a public room.....");
-      console.log("SESSION ID = ", someid);
-      await clearFromMap(myUserID, myLocationID, someid);
-    }
-
     console.log("inside connectButton.on event", event);
     console.log("inside connectButton.on event", group);
     chatWindow.append(`
-    	<div class="chat system-message">
-    		<span class="user-id">${myUserID}</span>
-    		has left the conversation.
-    	</div>
-    `);
+			<div class="chat system-message">
+				<span class="user-id">${myUserID}</span>
+				has left the conversation.
+			</div>
+		`);
   } else {
     if (document.getElementById("login-form").checkValidity()) {
       event.preventDefault();
@@ -127,31 +104,15 @@ connectButton.on("click", async function (event) {
       if (sessionID === "") {
         sessionID = undefined;
       }
-      myLocationID = $("#location-id").val();
-
-      //   myLocationInput = $("#location-id").val();
-      publicCheck = $("#public-id").val();
-      console.log("myyyyyyyy loccccccccc=========", myLocationInput);
-      console.log("myyyyyyyy public check =========", publicCheck);
-
+      myLocationInput = $("#location-id").val();
       console.log("myyyyyyyy loccccccccc=========", myLocationInput);
       console.log("sessionID = " + sessionID);
       console.log("myUserID = " + myUserID);
       //   group.connect(sessionID, myUserID);
-      if (publicCheck) {
-        someid = await generateRoomID(myUserID, myLocationID);
-        sessionID = someid;
-      }
-
-      console.log("final session ID");
       group.connect(sessionID);
       myUserID = escapeHTML(myUserID);
       console.log("what is a group : ", group);
       console.log("again myUserID: ", myUserID);
-      // Start the inactivity timer when the page loads or the user connects to the chat
-      // resetInactivityTimeout();
-
-      // console.log("peer iddddd", peer);
     }
   } // end if connected else not connected
 });
@@ -173,15 +134,44 @@ $("#confirm-action-btn").on("click", function (event) {
   switch (confirmationAction) {
     case "ban-user":
       let userToBan = userList.val();
-      console.log("userToBan=", userToBan);
       group.rejectUser(userToBan);
-      console.log("reject user executed..");
       break;
   }
   confirmationModal.modal("hide");
 });
 
-async function initializeNetworking() {
+// function adminLeft() {
+//   initializeNetworking();
+
+//   console.log("group after initialize networking : ", group);
+//   //   console.log("inside adminLeft() user id : ", userID);
+//   //   console.log("inside adminLeft() session id : ", sessionID);
+//   //   console.log("inside adminLeft() peer : ", peer);
+
+//   let connectionOptions = parseSignallingURL($("#server-url").val());
+
+//   console.log("connnn", connectionOptions);
+
+//   connectionOptions.path = "/peerserver/ss";
+//   intermediateGroup = new PeerGroup(function (error) {
+//     console.error(error.type + ": " + error);
+//     debugger;
+//   }, connectionOptions);
+//   console.log("helllooooooo");
+//   console.log("new groupppppp", intermediateGroup);
+
+//   intermediateGroup.connect(generateUniqueSessionID(myUserID), myUserID);
+
+//   console.log("new group created.....");
+//   // console.log("sessions are : ", sessions);
+//   //   console.log("disconnecting......");
+//   //   group.disconnect();
+
+//   //   console.log("reconnecting .......");
+//   //   group.reconnect();
+// }
+
+function initializeNetworking() {
   let connectionOptions = parseSignallingURL($("#server-url").val());
   console.log("inside initializeNetworking", connectionOptions);
   // console.log(connectionOptions)
@@ -193,23 +183,17 @@ async function initializeNetworking() {
   console.log("peer group is : ", PeerGroup);
   console.log("group :", group);
 
-  group.addEventListener("connected", async function (event) {
+  group.addEventListener("connected", function (event) {
     console.log("group eventListener connected : ", group);
     console.log("group eventListener connected event: ", event);
-
     alertArea.append(`
 			<div class="alert alert-info" id="pending-join-alert">
 				Connected to ${event.sessionID}. Waiting for permission to join the conversation&hellip;
 			</div>
 		`);
-    // await addToMap(event.peerID, event.sessionID);
-    // const intervalId = setInterval(async () => {
-    //   console.log("pppppp", event.peerID);
-    //   await sendMessageToServer(event.peerID);
-    // }, 7000);
   });
 
-  group.addEventListener("joined", async function (event) {
+  group.addEventListener("joined", function (event) {
     console.log("joined event : ", event);
     console.log("timestamp in joined event : ", event.messageTime);
     messageBox[0].focus();
@@ -239,13 +223,11 @@ async function initializeNetworking() {
     sessionBadge.css("visibility", "visible");
 
     if (event.administrator) {
-      console.log("event adminnnnn");
       $("#ban-user-btn").show();
     }
   });
 
   group.addEventListener("ejected", function (event) {
-    console.log("ejectedddddddddddddddddddddddddddddddddd.......");
     $("#pending-join-alert").remove();
     alertArea.append(`
 			<div class="alert alert-warning">
@@ -258,8 +240,7 @@ async function initializeNetworking() {
   // Uncomment to enable asking host's permission to join room
   // group.addEventListener('joinrequest', function (event) {
   // 	if (event.userID === 'everyone') {
-  // 		group.
-  // userID;
+  // 		group.rejectUser(userID);
   // 	} else {
   // 		joinRequests.push(event.userID);
   // 		if (joinRequests.length == 1) {
@@ -296,25 +277,7 @@ async function initializeNetworking() {
 
   group.addEventListener("userleft", function (event) {
     console.log("user left event : ", event);
-
     console.log(event.isAdmin);
-
-    // // console.log("some id ", someid);
-    // console.log("some id ", event.sessionID);
-
-    // console.log("some id ", myLocationID);
-
-    // if (myLocationID) {
-    //   console.log("since it is a public room.....");
-    //   console.log("myUser id", myUserID);
-    //   console.log("some id ", event.userID);
-    //   console.log("SESSION ID = ", event.sessionID);
-    //   console.log("some id ", event.locationID);
-
-    //   await clearFromMap(event.userID, event.locationID, event.sessionID);
-    //   console.log("clearFROMMAP executed....");
-    // }
-
     var userID = event.userID;
     chatWindow.append(`
 			<div class="chat system-message">
@@ -349,21 +312,6 @@ async function initializeNetworking() {
     if (scrolledToBottom) {
       chatWindow.scrollTop(chatWindow[0].scrollHeight);
     }
-  });
-
-  group.addEventListener("adminMessage", function (event) {
-    console.log("the event", event);
-    var text = formatAsHTML(event.message);
-    // group.send(makeMessage(MsgType.ACKNOWLEDGED, "acknowwwl"));
-    console.log("the text", text);
-    // group.acknowledgement(event.userID);
-    group.acknowledgement(event.userID);
-    console.log("acknowledgement executed....");
-  });
-
-  group.addEventListener("acknowledged", function (event) {
-    console.log("ACKKK", event);
-    console.log("heLLLLLLLLLLLLLLLLOOOOOOOOOOOOOOOO");
   });
 
   return group;
@@ -463,142 +411,3 @@ $(".modal:not(#join-request-modal)").on("hidden.bs.modal", function (event) {
   modalDisplayed = false;
   processJoinRequest();
 });
-
-async function fetchRoomID(myUserID, myLocationID) {
-  // const myUserID = "your_username"; // Replace with the actual value
-  // const myLocationID = "your_location_id"; // Replace with the actual value
-
-  const url = `http://localhost:9000/getRoom?username=${encodeURIComponent(
-    myUserID
-  )}&mylocation=${myLocationID}`;
-
-  try {
-    const response = await fetch(url);
-    console.log("the res :=", response);
-
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
-
-    const responseData = await response.json();
-    console.log("Server response:", responseData);
-    return responseData.roomid;
-  } catch (error) {
-    console.error("Error sending data to server:", error);
-    // Handle the error or return a default value if needed
-    return null;
-  }
-}
-
-// Call the async function and use the room ID if needed
-async function generateRoomID(myUserID, myLocationID) {
-  try {
-    const roomID = await fetchRoomID(myUserID, myLocationID);
-    console.log("Room ID:", roomID);
-    return roomID;
-    // Use the roomID for further operations if needed
-  } catch (error) {
-    console.error("Error:", error);
-    // Handle any errors that occurred during the process
-  }
-}
-
-async function clearFromMap(myUserID, myLocationID, sessionID) {
-  try {
-    console.log("clearMap........ sessionID", sessionID);
-    const url = `http://localhost:9000/clearMap?username=${encodeURIComponent(
-      myUserID
-    )}&mylocation=${myLocationID}&roomid=${encodeURIComponent(sessionID)}`;
-
-    const response = await fetch(url);
-    console.log("the res :=", response);
-
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
-    const responseData = await response.json();
-    console.log("Server response:", responseData);
-  } catch (error) {
-    console.error("Error sending data to server:", error);
-    // Handle the error or return a default value if needed
-    return null;
-  }
-}
-
-function beforeunload() {
-  console.log("beforeunloadddd");
-  group.disconnect();
-  disconnected();
-}
-
-window.addEventListener("beforeunload", beforeunload);
-// window.addEventListener("onunload", async function (event) {
-//   try {
-//     event.preventDefault();
-//     message = "you got disconnected";
-
-//     console.log("chat js....");
-
-//     const url = `http://localhost:9000/ondisconnect?username=${encodeURIComponent(
-//       myUserID
-//     )}&message=${message}&roomid=${encodeURIComponent(sessionID)}`;
-
-//     const response = await fetch(url);
-//     console.log("the res :=", response);
-
-//     if (!response.ok) {
-//       throw new Error("Network response was not ok");
-//     }
-//     const responseData = await response.json();
-//     console.log("Server response:", responseData);
-//   } catch (error) {
-//     console.error("Error sending data to server:", error);
-//     // Handle the error or return a default value if needed
-//     return null;
-//   }
-// });
-
-// window.addEventListener("beforeunload", async function (event) {
-//   try {
-//     event.preventDefault();
-//     message = "you got disconnected";
-
-//     console.log("chat js....");
-
-//     const url = `http://localhost:9000/ondisconnect?username=${encodeURIComponent(
-//       myUserID
-//     )}&message=${message}&roomid=${encodeURIComponent(sessionID)}`;
-
-//     const response = await fetch(url);
-//     console.log("the res :=", response);
-
-//     if (!response.ok) {
-//       throw new Error("Network response was not ok");
-//     }
-//     const responseData = await response.json();
-//     console.log("Server response:", responseData);
-//   } catch (error) {
-//     console.error("Error sending data to server:", error);
-//     // Handle the error or return a default value if needed
-//     return null;
-//   }
-// });
-
-// console.log("hhhhhh", group);
-// console.log("event beforeunload..", event);
-
-// group.disconnect();
-// await clearPublicRoom(myUserID, myLocationID, someid);
-
-async function clearPublicRoom(myUserID, myLocationID, someid) {
-  if (myLocationID) {
-    console.log("since it is a public room.....");
-    console.log("myUser id", myUserID);
-    // console.log("some id ", euserID);
-    console.log("SESSION ID = ", sessionID);
-    console.log("some id ", myLocationID);
-
-    await clearFromMap(myUserID, myLocationID, someid);
-    console.log("clearFROMMAP executed....");
-  }
-}
