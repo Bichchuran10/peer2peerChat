@@ -187,6 +187,16 @@ class PeerGroup extends EventTarget {
 
     const me = this;
 
+    var totalUsersInTheGroup;
+
+    var personsInTheGroup = [];
+
+    var heartbeatStatus = [];
+    var mapofUsers = new Map();
+
+    var robots = new Map();
+    //
+
     /**	Describes the type of content contained in a message sent between peers.
 			@enum
 		*/
@@ -211,6 +221,7 @@ class PeerGroup extends EventTarget {
       ADMIN_MSG: 6,
 
       ACKNOWLEDGED_MSG: 7,
+      rejecting: 8,
     });
 
     /**	@typedef Message
@@ -265,44 +276,47 @@ class PeerGroup extends EventTarget {
     }
 
     function sendMessageFromAdmin(isAdmin) {
+      let members = Array.from(me.userIDs);
+      console.log(Array.from(me.userIDs));
+      console.log("MEMMMMMMMMMMMMMMMMEEEEM", members);
+      // let members = Array.from(me.userIDs);
+      // let arrayofUsers = [];
+
       // if (isAdmin) {
       setInterval(() => {
+        console.log("MEMMMMMMMMMMMMMMMMEEEEM", members);
         console.log("connections=", connections);
         console.log("connections.values() is", connections.values());
+        // console.log(Array.from(me.userIDs));
+        // let members = Array.from(me.userIDs);
+        // for (let i = 0; i < members.length; i++) {
+        //   if (!mapofUsers.has(members[i])) {
+        //     console.log(
+        //       `${members[i]} was not present previously in ${mapofUsers}`
+        //     );
+
+        //     mapofUsers.set("members[i]", { userID: members[i], heartbeat: 0 });
+        //     // arrayofUsers.push({ userID: members[i], heartbeat: 0 });
+        //   }
+        // }
+
         let membersPresent = connections.size;
 
         console.log("the mem", membersPresent);
         if (membersPresent === 0) {
           return;
         } else {
+          // console.log("heartbee", heartbeatStatus);
+
+          // console.log("ARRRRRR", mapofUsers);
+          totalUsersInTheGroup = Array.from(me.userIDs);
+          totalUsersInTheGroup.shift();
+          console.log("total members present :", totalUsersInTheGroup);
           send(makeMessage(MsgType.ADMIN_MSG, "connected y'all"));
         }
-      }, 7000);
+      }, 5000);
       // }
     }
-
-    function sendMessageFromNonAdmin(person) {
-      console.log("the person to send=", person);
-      // console.log(send);
-      send(makeMessage(MsgType.ACKNOWLEDGED_MSG, "received from admin"));
-    }
-    //   person.send(makeMessage(MsgType.ACKNOWLEDGED_MSG, "received from admin"));
-
-    //   // setInterval(() => {
-    //   //   // console.log("connections non admin=", connections);
-    //   //   // console.log("con values", connections.values);
-    //   //   onlySend(
-    //   //     makeMessage(MsgType.ACKNOWLEDGED_MSG, "received from admin"),
-    //   //     person
-    //   //   );
-    //   // }, 9000);
-    // }
-
-    // function onlySend(message, person) {
-    //   console.log("inside onlySend", message);
-    //   console.log("inside onlySend", person);
-    //   person
-    // }
 
     /**	Raises an error.
 			@param {Error} error The error that has occurred.
@@ -337,6 +351,33 @@ class PeerGroup extends EventTarget {
         peerID: peer.id,
       });
       me.dispatchEvent(event);
+
+      let someusers = Array.from(me.userIDs);
+
+      console.log("connnnnnnnnn NNNNNNNNNNNNN", connections);
+      console.log("someusers", someusers);
+
+      mapofUsers.set(`${someusers[0]}`, {
+        userID: `${someusers[0]}`,
+        heartbeat: 0,
+      });
+
+      // for (let i = 0; i < someusers.length; i++) {
+      //   console.log(someusers[i]);
+      heartbeatStatus.push({
+        userID: someusers[0],
+        heartbeat: 0,
+      });
+      // }
+
+      console.log("MAAAAAAAAAAAAAAAAAAAAAAP", mapofUsers);
+      console.log("hearrrrrHHHHHHHHHHHHHHHHHHHHH", heartbeatStatus);
+      // personsInTheGroup.push()
+      // heartbeatStatus.push({
+      //   userID: userID,
+      //   heartbeat: 0,
+      // });
+      // console.log("THE HEARTBEAT :=", heartbeatStatus);
     }
 
     /**	Called when the local peer becomes part of a peer group.
@@ -351,6 +392,7 @@ class PeerGroup extends EventTarget {
           usersToPeers.get(escapeHTML(userID)) === sessionID ? true : false,
         isPrivate: false,
         messageTime: Date.now(),
+        usersall: connections,
       });
       me.dispatchEvent(event);
     }
@@ -447,15 +489,15 @@ class PeerGroup extends EventTarget {
           //We were either refused permission to join the peer group or kicked out.
           console.log("msgType......");
           group.disconnect();
-          console.log("group.disconnect gets executed here tooo....");
-          disconnected();
-          let chatWindow = $("#chat");
-          chatWindow.append(`
-    	<div class="chat system-message">
-    		<span class="user-id">${myUserID}</span>
-    		has left the conversation.
-    	</div>
-    `);
+          // console.log("group.disconnect gets executed here tooo....");
+          // disconnected();
+          // let chatWindow = $("#chat");
+          // chatWindow.append(`
+          // 	<div class="chat system-message">
+          // 		<span class="user-id">${myUserID}</span>
+          // 		has left the conversation.
+          // 	</div>
+          // `);
           event = createEvent("ejected", {
             sessionID: sessionID,
             userID: userID,
@@ -486,12 +528,15 @@ class PeerGroup extends EventTarget {
             sessionID: sessionID,
             userID: escapeHTML(getUserID(this)),
             receivedBy: myUserID,
+            connectionsMap: Array.from(me.userIDs),
+            totalUsersInTheGroup: totalUsersInTheGroup,
             isAdmin:
               usersToPeers.get(escapeHTML(getUserID(this))) !== sessionID
                 ? true
                 : false,
             message: message.data,
             isPrivate: message.type === MsgType.PRIVATE_MSG,
+            isAdminMsg: message.type === MsgType.ADMIN_MSG,
           });
           me.dispatchEvent(event);
           break;
@@ -500,6 +545,25 @@ class PeerGroup extends EventTarget {
             sessionID: sessionID,
             userID: escapeHTML(getUserID(this)),
             receivedBy: myUserID,
+            connectionsMap: Array.from(me.userIDs),
+            totalUsersInTheGroup: totalUsersInTheGroup,
+            isAdmin:
+              usersToPeers.get(escapeHTML(getUserID(this))) == sessionID
+                ? true
+                : false,
+            message: message.data,
+            isPrivate: message.type === MsgType.PRIVATE_MSG,
+            isAcknowledged: message.type === MsgType.ACKNOWLEDGED_MSG,
+          });
+          me.dispatchEvent(event);
+          break;
+        case MsgType.rejecting:
+          event = createEvent("rejecting", {
+            sessionID: sessionID,
+            userID: escapeHTML(getUserID(this)),
+            receivedBy: myUserID,
+            connectionsMap: Array.from(me.userIDs),
+            totalUsersInTheGroup: totalUsersInTheGroup,
             isAdmin:
               usersToPeers.get(escapeHTML(getUserID(this))) == sessionID
                 ? true
@@ -508,6 +572,24 @@ class PeerGroup extends EventTarget {
             isPrivate: message.type === MsgType.PRIVATE_MSG,
           });
           me.dispatchEvent(event);
+          break;
+        // case MsgType.ACKNOWLEDGED_MSG:
+        // event = createEvent("acknowledged", {
+        //   sessionID: sessionID,
+        //   userID: escapeHTML(getUserID(this)),
+        //   receivedBy: myUserID,
+        //   connectionsMap: Array.from(me.userIDs),
+        //   totalUsersInTheGroup: totalUsersInTheGroup,
+        //   isAdmin:
+        //     usersToPeers.get(escapeHTML(getUserID(this))) == sessionID
+        //       ? true
+        //       : false,
+        //   message: message.data,
+        //   isPrivate: message.type === MsgType.PRIVATE_MSG,
+        //   isAcknowledged: message.type === MsgType.ACKNOWLEDGED_MSG,
+        // });
+        // me.dispatchEvent(event);
+        // break;
       }
     }
 
@@ -563,6 +645,7 @@ class PeerGroup extends EventTarget {
         usersToPeers.get(escapeHTML(disconnectedUser)) === sessionID;
       console.log("admin left", adminAdmin);
       if (disconnectedUser !== undefined) {
+        console.log("This has been called. User Left");
         event = createEvent("userleft", {
           sessionID: sessionID,
           userID: escapeHTML(disconnectedUser),
@@ -678,9 +761,12 @@ class PeerGroup extends EventTarget {
       var message = makeMessage(MsgType.CONNECT_ERROR, errorMessage);
       message.errorType = reason;
       connection.send(message);
+      //there from the start
       setTimeout(function () {
+        console.log("after 2 seconds.....");
         connection.close();
       }, 2000);
+      // group.disconnect();
     }
 
     /**	Configures this peer to act as the peer group leader. */
@@ -701,7 +787,12 @@ class PeerGroup extends EventTarget {
 
       console.log("peer");
       console.log(peer);
-      
+      if (peer.id === sessionID) {
+        console.log("ADMINNNNNNNNNNN");
+        console.log("send heartbeat");
+        sendMessageFromAdmin();
+      }
+
       peer.on("error", function (error) {
         if (error.type === "unavailable-id") {
           console.log("unavailable-idddd error");
@@ -719,7 +810,9 @@ class PeerGroup extends EventTarget {
       });
 
       peer.on("connection", function (connection) {
-        console.log("just checking it here in connection");
+        console.log(
+          "inside peer.on connection just checking it here in connection"
+        );
         connection.on("open", function () {
           //Rejected users are not welcome.
           console.log("here tooooo in connection open");
@@ -792,23 +885,31 @@ class PeerGroup extends EventTarget {
       console.log("should i return something ...");
     }
 
-    this.acknowledgement = function acknowledgement(person) {
-      console.log("inside this.acknowledgement=", person);
-      sendMessageFromNonAdmin(person);
-      // if (!isAdmin) {
-      // setInterval(() => {
-      //   console.log("INSIDE acknowledgement");
-      // console.log("connections=", connections);
-      // console.log("connections.values() is", connections.values());
-      // let membersPresent = connections.size;
+    // function getTotalConnectedMembers() {
+    //   personsInTheGroup = Array.from(me.userIDs);
+    // }
 
-      // console.log("the mem", membersPresent);
-      // if (membersPresent === 0) {
-      //   return;
-      // } else {
-      //   send(makeMessage(MsgType.ACKNOWLEDGED, "admin message received"));
-      // }, 5000);
-    };
+    // this.sendUserIDs = function sendingSomething(myID) {
+    //   console.log("received User ID :=", myID);
+    // };
+
+    // this.acknowledgement = function acknowledgement(person) {
+    //   console.log("inside this.acknowledgement=", person);
+    //   sendMessageFromNonAdmin(person);
+    //   // if (!isAdmin) {
+    //   // setInterval(() => {
+    //   //   console.log("INSIDE acknowledgement");
+    //   // console.log("connections=", connections);
+    //   // console.log("connections.values() is", connections.values());
+    //   // let membersPresent = connections.size;
+
+    //   // console.log("the mem", membersPresent);
+    //   // if (membersPresent === 0) {
+    //   //   return;
+    //   // } else {
+    //   //   send(makeMessage(MsgType.ACKNOWLEDGED, "admin message received"));
+    //   // }, 5000);
+    // };
 
     /**	Attempts to connect to a peer group, or creates the group if it doesn't exist yet.
 			@param {string} sessionIDToJoin The name of the peer group to try to join.
@@ -829,6 +930,8 @@ class PeerGroup extends EventTarget {
       console.log("myuser ID is = : ", myUserID);
 
       disconnect(); //let's not call this
+
+      console.log("THE CONNECTIONS=", connections);
       sessionID = sessionIDToJoin;
       userID = myUserID;
       joined = false;
@@ -985,6 +1088,7 @@ class PeerGroup extends EventTarget {
 			peer group or the user ID of a peer waiting to join the peer group.
 		*/
     this.rejectUser = function (remoteUserID) {
+      console.log("INSIDE REJECT USER....person to be rejected", remoteUserID);
       rejectedUsers.add(remoteUserID);
       var peerName = usersToPeers.get(remoteUserID);
       peersToUsers.delete(peerName);
@@ -995,17 +1099,16 @@ class PeerGroup extends EventTarget {
         connection = connections.get(peerName);
       }
       if (connection !== undefined) {
+        console.log("initiating banned from sess");
         rejectConnection(
           connection,
           ErrorType.PROHIBITED,
           `You've been banned from the session "${sessionID}".`
         );
       }
+
+      console.log("AFTER REJECT USER........................");
     };
-
-    // this.acknowledgement=function (){
-
-    // }
 
     /**	Sends a message to all members of the peer group.
 			@param {any} data The data to send.
@@ -1033,12 +1136,112 @@ class PeerGroup extends EventTarget {
       }
     };
 
+    //ONLY TO ADMIN
+
+    this.sendPrivateAdmin = function (destUser, data) {
+      var destPeerName = usersToPeers.get(destUser);
+      if (destPeerName === undefined) {
+        var error = new Error(`No such user ${destUser}`);
+        throwError(error);
+      } else {
+        var connection = connections.get(destPeerName);
+        if (connection === undefined) {
+          connection = pending.get(destPeerName);
+        }
+        connection.send(makeMessage(MsgType.ACKNOWLEDGED_MSG, data));
+      }
+    };
+
+    this.receiveID = function (myid) {
+      console.log("user id received = ", myid);
+      console.log("HOLD");
+      // setInterval(() => {
+      // const myid = /* obtain your ID here */;
+      checkUsers(myid);
+      // }, 5000);
+      // checkUsers(myid);
+    };
+
+    // this.addUserToTheGroup = function (theid) {
+    //   console.log("adding this to the group", theid);
+    //   console.log("heartbeat status initially", heartbeatStatus);
+    //   heartbeatStatus.push({
+    //     userID: userID,
+    //     heartbeat: 0,
+    //   });
+    //   console.log("THE HEARTBEAT :=", heartbeatStatus);
+    // };
+
+    function checkUsers(myid) {
+      personsInTheGroup = Array.from(me.userIDs);
+
+      console.log("peersToUsers", peersToUsers);
+      console.log("usersToPeers", usersToPeers);
+
+      robots.set(myid, Date.now());
+      console.log("robots now", robots);
+
+      // robots.set(myid, 0);
+      const currentTime = Date.now();
+
+      personsInTheGroup.forEach((personID) => {
+        const lastReceivedTime = robots.get(personID);
+        console.log("LAST =================================", lastReceivedTime);
+
+        if (lastReceivedTime && currentTime - lastReceivedTime > 10000) {
+          console.log("XLXLXLXLXLXL=================================");
+          console.log(`ID ${personID} not received in the last 10 seconds.`);
+          console.log(usersToPeers, personID);
+          let thePeerId = usersToPeers.get(personID);
+          console.log("the peer id=", thePeerId);
+
+          send(makeMessage(MsgType.rejecting, `${personID}`));
+          // connection.send(makeMessage(MsgType.PRIVATE_MSG, data))
+
+          // group.rejectUser(personID);
+          // const xyz = new Peer(thePeerId);
+          // xyz.disconnect();
+          group.rejectUser(personID);
+          console.log("reject user executed..");
+        } else {
+          console.log(`ID ${personID} is present`);
+        }
+      });
+
+      // setInterval(() => {
+      //   const myid = /* obtain your ID here */;
+      //   checkUsers(myid);
+      // }, 5000);
+
+      // console.log("me.....", me.userIDs);
+      // if (personsInTheGroup.includes(myid)) {
+      //   console.log("okkkk");
+      // }
+      // console.log("robots", robots);
+
+      // setInterval(()=>{
+      //   robots.set(myid, 1)
+      //   console.log('robots after 9 sec',)
+      // },9000)
+
+      // setInterval(() => {
+
+      // }, 8000);
+      // console.log("johohoo", userIDs);
+      // console.log("checking users arr", personsInTheGroup);
+
+      // console.log("heartbeat status..=================", heartbeatStatus);
+    }
+
     /**	The set of all user IDs belonging to peers currently in the peer group.
      */
     Object.defineProperty(this, "userIDs", {
       enumerable: true,
       get() {
+        // console.log("HUEHUEHUEHUE");
         let userIDs = new Set();
+
+        // console.log("OKOKOKOKOK", userIDs);
         userIDs.add(escapeHTML(userID));
         for (let peerID of connections.keys()) {
           userIDs.add(escapeHTML(peersToUsers.get(peerID)));
@@ -1066,3 +1269,14 @@ class PeerGroup extends EventTarget {
     return /^[A-Za-z0-9]+(?:[ _-][A-Za-z0-9]+)*$/;
   }
 }
+
+// roup.disconnect();
+//           console.log("group.disconnect gets executed here tooo....");
+//           disconnected();
+//           let chatWindow = $("#chat");
+//           chatWindow.append(`
+//     	<div class="chat system-message">
+//     		<span class="user-id">${myUserID}</span>
+//     		has left the conversation.
+//     	</div>
+//     `);

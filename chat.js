@@ -14,6 +14,9 @@ var myLocationInput;
 var confirmationAction;
 var publicCheck;
 var someid;
+var connectedUsers = new Map();
+
+var allUsers = [];
 // var heartbeatInterval;
 // let inactivityTimeout;
 // const inactivityDuration = 60000; // 60 seconds of inactivity before triggering disconnection
@@ -197,6 +200,13 @@ async function initializeNetworking() {
     console.log("group eventListener connected : ", group);
     console.log("group eventListener connected event: ", event);
 
+    // group.addUserToTheGroup(event.userID);
+    // allUsers.push({
+    //   userID: event.userID,
+    //   heartbeat: 0,
+    // });
+    // console.log("allusers", allUsers);
+
     alertArea.append(`
 			<div class="alert alert-info" id="pending-join-alert">
 				Connected to ${event.sessionID}. Waiting for permission to join the conversation&hellip;
@@ -357,13 +367,38 @@ async function initializeNetworking() {
     // group.send(makeMessage(MsgType.ACKNOWLEDGED, "acknowwwl"));
     console.log("the text", text);
     // group.acknowledgement(event.userID);
-    group.acknowledgement(event.userID);
+    // group.acknowledgement(event.userID);
     console.log("acknowledgement executed....");
+    group.sendPrivateAdmin(event.userID, "received......");
   });
 
+  group.addEventListener("rejecting", function (event) {
+    let userToBeRejected = formatAsHTML(event.message);
+    console.log("TEXT FROM ADMIN ,,,REJECTTTT", userToBeRejected);
+    console.log("the ev AAAAAA", event);
+    group.rejectUser(userToBeRejected);
+
+    console.log("ALLLLLLLLLLLL DONE");
+  });
   group.addEventListener("acknowledged", function (event) {
     console.log("ACKKK", event);
     console.log("heLLLLLLLLLLLLLLLLOOOOOOOOOOOOOOOO");
+    let tot = event.totalUsersInTheGroup;
+
+    group.receiveID(event.userID);
+    console.log("totttt", tot);
+
+    // connectedUsers.set(event.userID, 0);
+
+    // if (!connectedUsers.has(event.userID)) {
+    //   connectedUsers.set(event.userID, 0); // Start the count at 0 for ACKNOWLEDGEMENT RECEIVED
+    // } else {
+    //   connectedUsers.set(event.userID, connectedUsers.get(event.userID) + 1);
+    // }
+
+    // console.log("connected users map : ", connectedUsers);
+
+    // group.sendPrivate(destination, textToSend);
   });
 
   return group;
@@ -410,8 +445,13 @@ messageBox.on("keydown", function (event) {
         chatWindow.scrollTop(chatWindow[0].scrollHeight);
       }
       if (destination === "everyone") {
+        console.log("sending TO EVERYONE....");
+
         group.send(textToSend);
       } else {
+        console.log("sending to specific....");
+        console.log("the destination=", destination);
+        console.log("the textoSend=", textToSend);
         group.sendPrivate(destination, textToSend);
       }
     }
@@ -531,7 +571,7 @@ function beforeunload() {
   disconnected();
 }
 
-window.addEventListener("beforeunload", beforeunload);
+// window.addEventListener("beforeunload", beforeunload);
 // window.addEventListener("onunload", async function (event) {
 //   try {
 //     event.preventDefault();
