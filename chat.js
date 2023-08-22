@@ -44,21 +44,21 @@ function processJoinRequest() {
     joinRequestModal.modal("show");
   }
 }
+//INITIALLY THERE
+// $("#accept-join").on("click", function (event) {
+//   console.log("acept join,,.....");
+//   var userID = joinRequests.shift();
+//   group.acceptUser(userID);
+//   processJoinRequest();
+// });
 
-$("#accept-join").on("click", function (event) {
-  console.log("acept join,,.....");
-  var userID = joinRequests.shift();
-  group.acceptUser(userID);
-  processJoinRequest();
-});
+// $("#reject-join").on("click", function (event) {
+//   var userID = joinRequests.shift();
+//   group.rejectUser(userID);
+//   processJoinRequest();
+// });
 
-$("#reject-join").on("click", function (event) {
-  var userID = joinRequests.shift();
-  group.rejectUser(userID);
-  processJoinRequest();
-});
-
-function disconnected() {
+async function disconnected() {
   console.log("function disconnected.......");
   connected = false;
   sessionBadge.css("visibility", "hidden");
@@ -67,6 +67,7 @@ function disconnected() {
   connectButton.removeClass("btn-secondary");
   $(".login-detail").slideDown({ easing: "linear", duration: 2000 });
   userList.children(":not([value=everyone])").remove();
+  return;
 }
 
 connectButton.on("click", async function (event) {
@@ -159,11 +160,17 @@ connectButton.on("click", async function (event) {
   } // end if connected else not connected
 });
 
+//CHECK BAN
+// userList.on("input", function (event) {
+//   $("#ban-user-btn").prop("disabled", $(this).val() === "everyone");
+// });
 userList.on("input", function (event) {
-  $("#ban-user-btn").prop("disabled", $(this).val() === "everyone");
+  console.log("how are you?/", event);
+  $("#ban-user-btn").show();
 });
 
 $("#ban-user-btn").on("click", function (event) {
+  console.log("ban clicked..");
   var userToBan = userList.val();
   var username = userList.children(`[value=${userToBan}]`).html();
   confirmationTitle.html("Ban " + username);
@@ -200,18 +207,28 @@ async function initializeNetworking() {
     console.log("group eventListener connected : ", group);
     console.log("group eventListener connected event: ", event);
 
+    console.log(`${event.userID} is connected`);
+
+    if (event.peerID === event.sessionID) {
+      console.log("admin man", event.userID);
+      console.log("sending heartbeats....");
+      group.sendMessageFromAdmin();
+    } else {
+      console.log("connected user is not the admin", event.userID);
+    }
+
     // group.addUserToTheGroup(event.userID);
     // allUsers.push({
     //   userID: event.userID,
     //   heartbeat: 0,
     // });
     // console.log("allusers", allUsers);
-
+    //INITIALLY THERE
     alertArea.append(`
-			<div class="alert alert-info" id="pending-join-alert">
-				Connected to ${event.sessionID}. Waiting for permission to join the conversation&hellip;
-			</div>
-		`);
+    	<div class="alert alert-info" id="pending-join-alert">
+    		Connected to ${event.sessionID}. Waiting for permission to join the conversation&hellip;
+    	</div>
+    `);
     // await addToMap(event.peerID, event.sessionID);
     // const intervalId = setInterval(async () => {
     //   console.log("pppppp", event.peerID);
@@ -220,6 +237,7 @@ async function initializeNetworking() {
   });
 
   group.addEventListener("joined", async function (event) {
+    console.log(`event.userID has joined`);
     console.log("joined event : ", event);
     console.log("timestamp in joined event : ", event.messageTime);
     messageBox[0].focus();
@@ -233,6 +251,8 @@ async function initializeNetworking() {
 				</button>
 	  		</div>
 		`);
+
+    // INITIALLY THERE
     alertArea.append(alert);
     fadeOutAndRemove(alert);
 
@@ -248,10 +268,11 @@ async function initializeNetworking() {
     );
     sessionBadge.css("visibility", "visible");
 
-    if (event.administrator) {
-      console.log("event adminnnnn");
-      $("#ban-user-btn").show();
-    }
+    // BAN VISIBILITY ONLY FOR ADMIN
+    // if (event.administrator) {
+    //   console.log("event adminnnnn");
+    //   $("#ban-user-btn").show();
+    // }
   });
 
   group.addEventListener("ejected", function (event) {
@@ -262,7 +283,9 @@ async function initializeNetworking() {
 				${event.message}
 			</div>
 		`);
+    // group.disconnect();
     disconnected();
+    console.log("disconnected in EJECT EXECUTED");
   });
 
   // Uncomment to enable asking host's permission to join room
@@ -369,7 +392,9 @@ async function initializeNetworking() {
     // group.acknowledgement(event.userID);
     // group.acknowledgement(event.userID);
     console.log("acknowledgement executed....");
+    // group.checkAdminMessageReceived(event.userID);
     group.sendPrivateAdmin(event.userID, "received......");
+    group.checkAdminMessageReceived(event.userID);
   });
 
   group.addEventListener("rejecting", function (event) {
@@ -379,6 +404,89 @@ async function initializeNetworking() {
     group.rejectUser(userToBeRejected);
 
     console.log("ALLLLLLLLLLLL DONE");
+  });
+  group.addEventListener("adminrejection", function (event) {
+    let userToBeRejected = formatAsHTML(event.message);
+    console.log(
+      "TEXT FROM OTHER MEMBERS ABOUT ADMIN REJECTION ,,,REJECTTTT",
+      userToBeRejected
+    );
+    console.log("the ADMIN REJECTION EVENT", event);
+    group.rejectUser(userToBeRejected);
+
+    console.log("sessionn ID to be connected now", event.sessionID);
+    // group.connect(event.sessionID);
+
+    console.log("ALLLLLLLLLLLL DONE admin rejection");
+  });
+
+  group.addEventListener("newgroup", function (event) {
+    console.log("hahahahahahYAYYYYYYYAAAAAAAAAAAAAAALLLLL=====");
+  });
+
+  group.addEventListener("joinnewgroup", async function (event) {
+    console.log("the event joinnewgroup", event);
+    // console.log("peer=", peer);
+    console.log("the msg=", event.message);
+    disconnected();
+
+    // chatWindow.append(`
+    //   <div class="chat system-message">
+    //     <span class="user-id">${myUserID}</span>
+    //     has left the conversation.
+    //   </div>
+    // `);
+    initializeNetworking();
+
+    let tojointhisroom = event.sessionID;
+    console.log("room to be joined ", tojointhisroom);
+    // $(".login-detail").slideUp();
+    group.connect(tojointhisroom);
+
+    // $(".login-detail").slideUp();
+    connected = true;
+    $(".login-detail").slideUp();
+    connectButton.html("Disconnect");
+    console.log("inside connectButton.on if(connected) IS FALSE ....");
+    connectButton.addClass("btn-secondary");
+    connectButton.removeClass("btn-primary");
+
+    // $(".login-detail").slideUp();
+    //CHANGE DISCONNECT BUTTON
+    // connectButton.html("Disconnect");
+    // console.log("inside connectButton.on if(connected) IS FALSE ....");
+    // connectButton.addClass("btn-secondary");
+    // connectButton.removeClass("btn-primary");
+
+    // let newGroup=new group;
+    // let newPeer = new Peer();
+    // console.log("the new peer", newPeer);
+    // console.log("the new peer id", newPeer._id);
+    // newPeer.connect(tojointhisroom);
+    // group.reconnect();
+    // console.log("NEW PEER RECONNECTION");
+    // newPeer.reconnect();
+    // let tojointhisroom = event.sessionID;
+    // console.log("room to be joined ", tojointhisroom);
+
+    // group.connect(tojointhisroom);
+
+    // let newPeer = new Peer();
+    // newPeer.reconnect();
+    // group.connect(event.sessionID);
+    // await group.disconnect();
+    // disconnected();
+    // chatWindow.append(`
+    // 	<div class="chat system-message">
+    // 		<span class="user-id">${myUserID}</span>
+    // 		has left the conversation.
+    // 	</div>
+    // `);
+    // console.log("GROUP DISCONNECTED EXECUTED");
+    // connected = false;
+
+    // group.connect(event.sessionID);
+    // disconnected();
   });
   group.addEventListener("acknowledged", function (event) {
     console.log("ACKKK", event);
@@ -495,6 +603,7 @@ messageBox.on("keydown", function (event) {
   }
 });
 
+//INITIALLY THERE
 $(".modal:not(#join-request-modal)").on("show.bs.modal", function (event) {
   modalDisplayed = true;
 });
@@ -568,6 +677,7 @@ async function clearFromMap(myUserID, myLocationID, sessionID) {
 function beforeunload() {
   console.log("beforeunloadddd");
   group.disconnect();
+
   disconnected();
 }
 

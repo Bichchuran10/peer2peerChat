@@ -191,10 +191,11 @@ class PeerGroup extends EventTarget {
 
     var personsInTheGroup = [];
 
-    var heartbeatStatus = [];
-    var mapofUsers = new Map();
-
     var robots = new Map();
+    const activeClients = new Set();
+    const activeIntervals = new Set();
+    var adminMessageReceived = new Map();
+    var userActiveIntervals = new Set();
     //
 
     /**	Describes the type of content contained in a message sent between peers.
@@ -222,6 +223,8 @@ class PeerGroup extends EventTarget {
 
       ACKNOWLEDGED_MSG: 7,
       rejecting: 8,
+      ADMIN_REJECTION: 9,
+      // joinnewgroup: 10,
     });
 
     /**	@typedef Message
@@ -275,7 +278,7 @@ class PeerGroup extends EventTarget {
       return new PeerGroupEvent(type, isAdmin, properties);
     }
 
-    function sendMessageFromAdmin(isAdmin) {
+    this.sendMessageFromAdmin = function () {
       let members = Array.from(me.userIDs);
       console.log(Array.from(me.userIDs));
       console.log("MEMMMMMMMMMMMMMMMMEEEEM", members);
@@ -316,7 +319,7 @@ class PeerGroup extends EventTarget {
         }
       }, 5000);
       // }
-    }
+    };
 
     /**	Raises an error.
 			@param {Error} error The error that has occurred.
@@ -357,21 +360,21 @@ class PeerGroup extends EventTarget {
       console.log("connnnnnnnnn NNNNNNNNNNNNN", connections);
       console.log("someusers", someusers);
 
-      mapofUsers.set(`${someusers[0]}`, {
-        userID: `${someusers[0]}`,
-        heartbeat: 0,
-      });
+      // mapofUsers.set(`${someusers[0]}`, {
+      //   userID: `${someusers[0]}`,
+      //   heartbeat: 0,
+      // });
 
-      // for (let i = 0; i < someusers.length; i++) {
-      //   console.log(someusers[i]);
-      heartbeatStatus.push({
-        userID: someusers[0],
-        heartbeat: 0,
-      });
+      // // for (let i = 0; i < someusers.length; i++) {
+      // //   console.log(someusers[i]);
+      // heartbeatStatus.push({
+      //   userID: someusers[0],
+      //   heartbeat: 0,
+      // });
       // }
 
-      console.log("MAAAAAAAAAAAAAAAAAAAAAAP", mapofUsers);
-      console.log("hearrrrrHHHHHHHHHHHHHHHHHHHHH", heartbeatStatus);
+      // console.log("MAAAAAAAAAAAAAAAAAAAAAAP", mapofUsers);
+      // console.log("hearrrrrHHHHHHHHHHHHHHHHHHHHH", heartbeatStatus);
       // personsInTheGroup.push()
       // heartbeatStatus.push({
       //   userID: userID,
@@ -403,10 +406,15 @@ class PeerGroup extends EventTarget {
 			identified by the connection parameter.
 		*/
     function getUserID(connection) {
+      console.log("gett...GETUSERID");
       var label = connection.label;
+      console.log("EWHAT ISSS LABEL", label);
+      console.log("also the userID", userID);
       if (label === userID) {
+        console.log("peerstousers label ", label);
         return peersToUsers.get(connection.peer);
       } else {
+        console.log("not from peersToUsers label ", label);
         return label;
       }
     }
@@ -454,6 +462,7 @@ class PeerGroup extends EventTarget {
       switch (message.type) {
         case MsgType.PEER_LIST:
           //Connect to the other peers in the peer group.
+          console.log("PEER LIST .......");
           if (this.peer === sessionID) {
             for (const peerName of message.data) {
               if (peerName !== peer.id) {
@@ -481,14 +490,20 @@ class PeerGroup extends EventTarget {
             isPrivate: false,
           });
           me.dispatchEvent(event);
+          console.log("tryingToConnect.size", tryingToConnect.size);
+          console.log("joined for me", joined);
           if (!joined && tryingToConnect.size === 0) {
+            console.log("IF NOT JOINED AND TRYING TO CONNECT");
             sessionEntered();
           }
           break;
         case MsgType.CONNECT_ERROR:
           //We were either refused permission to join the peer group or kicked out.
-          console.log("msgType......");
-          group.disconnect();
+          // console.log("EJECTEDDDDDDDD");
+          console.log("EJECTEDD");
+          // group.disconnect();
+          // connectionClosed();
+          // group.disconnect();
           // console.log("group.disconnect gets executed here tooo....");
           // disconnected();
           // let chatWindow = $("#chat");
@@ -511,6 +526,7 @@ class PeerGroup extends EventTarget {
         case MsgType.DATA:
         case MsgType.PRIVATE_MSG:
           //Forward the application level message to the application.
+          console.log("MESSAGE TYPE PRIVVVV MSG");
           event = createEvent("message", {
             sessionID: sessionID,
             userID: escapeHTML(getUserID(this)),
@@ -573,6 +589,37 @@ class PeerGroup extends EventTarget {
           });
           me.dispatchEvent(event);
           break;
+        case MsgType.ADMIN_REJECTION:
+          event = createEvent("adminrejection", {
+            sessionID: sessionID,
+            userID: escapeHTML(getUserID(this)),
+            receivedBy: myUserID,
+            connectionsMap: Array.from(me.userIDs),
+            totalUsersInTheGroup: totalUsersInTheGroup,
+            isAdmin:
+              usersToPeers.get(escapeHTML(getUserID(this))) == sessionID
+                ? true
+                : false,
+            message: message.data,
+            isPrivate: message.type === MsgType.PRIVATE_MSG,
+          });
+          me.dispatchEvent(event);
+          break;
+        // case MsgType.joinnewgroup:
+        //   event = createEvent("joinnewgroup", {
+        //     sessionID: sessionID,
+        //     userID: escapeHTML(getUserID(this)),
+        //     receivedBy: myUserID,
+        //     connectionsMap: Array.from(me.userIDs),
+        //     totalUsersInTheGroup: totalUsersInTheGroup,
+        //     isAdmin:
+        //       usersToPeers.get(escapeHTML(getUserID(this))) == sessionID
+        //         ? true
+        //         : false,
+        //     message: message.data,
+        //   });
+        //   me.dispatchEvent(event);
+        //   break;
         // case MsgType.ACKNOWLEDGED_MSG:
         // event = createEvent("acknowledged", {
         //   sessionID: sessionID,
@@ -590,6 +637,7 @@ class PeerGroup extends EventTarget {
         // });
         // me.dispatchEvent(event);
         // break;
+        // }
       }
     }
 
@@ -613,7 +661,7 @@ class PeerGroup extends EventTarget {
 			lost. Not called if this peer isn't a member of a peer group or if the
 			disconnect() function has been invoked. **/
 
-    function connectionClosed() {
+    async function connectionClosed() {
       console.log("inside connectionClosed : ", peer);
       var label = this.label;
       var peerName = this.peer;
@@ -622,9 +670,10 @@ class PeerGroup extends EventTarget {
       console.log("the label :", label);
       console.log("the peerName :", peerName);
       console.log("the userid", userID);
-      console.log("INITIAL DISCONNECTED USER", disconnectedUser);
+      // console.log("INITIAL DISCONNECTED USER", disconnectedUser);
       console.log("INITIAL EVENT", event);
-
+      console.log("peersToUser", peersToUsers);
+      console.log("usersToPeers", usersToPeers);
       if (label === userID) {
         disconnectedUser = peersToUsers.get(peerName);
         console.log("iffffff disconnectedUser", disconnectedUser);
@@ -641,9 +690,36 @@ class PeerGroup extends EventTarget {
 
       var connectedUserIDs = Array.from(me.userIDs);
       console.log("connecteduserIDs: ", connectedUserIDs);
-      var adminAdmin =
-        usersToPeers.get(escapeHTML(disconnectedUser)) === sessionID;
+      var adminAdmin;
+      console.log("sessionid on disconnection", sessionID);
+      console.log("hello", usersToPeers.get(escapeHTML(disconnectedUser)));
+      if (usersToPeers.get(escapeHTML(disconnectedUser)) === sessionID) {
+        adminAdmin = true;
+      }
+
       console.log("admin left", adminAdmin);
+
+      // if (disconnectedUser == undefined) {
+      //   adminAdmin = true;
+      //   console.log(
+      //     "admin left now since disconnected user is undefined",
+      //     adminAdmin
+      //   );
+
+      //   if (adminAdmin) {
+      //     peer.disconnect();
+      //     console.log("DISCONNECTION DONE");
+
+      //     console.log("RECONNECTTTTTTT");
+
+      //     // console.log("peer.reconnect() = ", this.reconnect);
+      //     // group.connect(sessionID, userID); //try it later
+      //     // setTimeout(() => {
+      //     //   console.log("after 8 sec reconnect will run");
+      //     peer.reconnect();
+      //   }
+      // }
+
       if (disconnectedUser !== undefined) {
         console.log("This has been called. User Left");
         event = createEvent("userleft", {
@@ -662,7 +738,7 @@ class PeerGroup extends EventTarget {
         });
         me.dispatchEvent(event);
 
-        console.log("thissssssssssss", this);
+        // console.log("thissssssssssss", this);
 
         // if (adminAdmin) {
         //   console.log("peeerrrrr", peer);
@@ -675,20 +751,92 @@ class PeerGroup extends EventTarget {
         //   // console.log("peer.reconnect() = ", this.reconnect);
         //   // group.connect(sessionID, userID); //try it later
         // }
+        // peersToUsers.clear();
+        // usersToPeers.clear();
+        // tryingToConnect.clear();
+        // acceptedUsers.clear();
+        // rejectedUsers.clear();
+
+        //NEWLY ADDED -
+        let toBelDeleted = peersToUsers.get(peerName);
+        console.log("to be deleted=", toBelDeleted);
+        peersToUsers.delete(peerName);
+        usersToPeers.delete(toBelDeleted);
+
+        console.log("peersToUsers map now IN CONNECTION CLOSED=", peersToUsers);
+        console.log(
+          "UsersToPeers map now IN CONNECTION CLOSED= ",
+          usersToPeers
+        );
+
         if (adminAdmin) {
           console.log("peeerrrrr", peer);
           // console.log("peer.disconnect() = ", this.disconnect);
 
+          console.log("peer.disconnect will be called now");
+          console.log(
+            "the session id and userid in admin rejection",
+            sessionID,
+            userID
+          );
           peer.disconnect();
+          // send(makeMessage(MsgType.joinnewgroup, `${sessionID}`));
+          // peer.reconnect();
+          // connection.reconnect();
+          // let newPeer = new Peer();
+          // peer.connect();
 
-          console.log("RECONNECTTTTTTT");
+          // setInterval(() => {
+          // send(makeMessage(MsgType.joinnewgroup, `${sessionID}`));
+
+          // joinnewgroup
+          event = createEvent("joinnewgroup", {
+            sessionID: sessionID,
+            userID: escapeHTML(disconnectedUser),
+            isAdmin:
+              usersToPeers.get(escapeHTML(disconnectedUser)) === sessionID,
+            locationID: myLocationID,
+            // adminLeft: (function () {
+            //   if (adminAdmin) {
+            //     console.log(`admin-${disconnectedUser}  left`);
+            //   } else {
+            //     console.log(`${disconnectedUser} left`);
+            //   }
+            // })(),
+            isPrivate: false,
+          });
+          me.dispatchEvent(event);
+          // if (connectedUserIDs.length == 1) {
+          //   peer.reconnect();
+          // }
+          // }, 5000);
+          // console.log("new peer connected");
+          // let newPeer = new Peer();
+          // console.log("new peer=", newPeer);
+          // newPeer.disconnect();
+          // newPeer.connect(sessionID);
+
+          // setTimeout(() => {
+          //   // newPeer.disconnect();
+          //   console.log("reconnection begins...");
+
+          //   send(makeMessage(MsgType.joinnewgroup, `${sessionID}`));
+          // }, 5000);
+
+          // peer.disconnect();
+
+          // console.log("RECONNECTTTTTTT");
 
           // console.log("peer.reconnect() = ", this.reconnect);
           // group.connect(sessionID, userID); //try it later
-          setTimeout(() => {
-            console.log("after 8 sec reconnect will run");
-            peer.reconnect();
-          }, 8000);
+          // setTimeout(() => {
+          //   console.log("after 8 sec reconnect will run");
+          // await peer.reconnect();
+
+          console.log("RECONNECTION COMPLETED !!!!!!");
+
+          // console.log("peer reconnect success");
+          // }, 8000);
         }
       }
     }
@@ -709,7 +857,7 @@ class PeerGroup extends EventTarget {
       // //     console.log("disssssss");
       // //     group.disconnect();
       // //   });
-      console.log("insideeee peerGroup disconnect ");
+      console.log("insideeee peerGroup disconnect ", userID);
       for (const connection of connections.values()) {
         connection.off("close", connectionClosed);
         console.log("closing connectionn......");
@@ -721,6 +869,8 @@ class PeerGroup extends EventTarget {
         console.log("destroying peer......", peer);
         peer.destroy();
       }
+
+      // initially it was here
       peersToUsers.clear();
       usersToPeers.clear();
       tryingToConnect.clear();
@@ -758,14 +908,110 @@ class PeerGroup extends EventTarget {
 			@param {string} errorMessage A string explaining the reason for terminating the connection.
 		*/
     function rejectConnection(connection, reason, errorMessage) {
+      console.log("INSIDE REJECT CONNECTION : =", reason);
       var message = makeMessage(MsgType.CONNECT_ERROR, errorMessage);
       message.errorType = reason;
       connection.send(message);
-      //there from the start
+
+      console.log("SEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEND======");
+      // console.log("peerNam=", peerName);
+      // console.log("sessionID=", sessionID);
+      // if (peerName == sessionID) {
+      //   console.log("ADMIN LEAVING..............");
+
+      //   // console.log("inside connectionClosed : ", peer);
+      //   // var label = this.label;
+      //   // var peerName = this.peer;
+      //   var disconnectedUser, event;
+
+      //   disconnectedUser = peersToUsers.get(peerName);
+
+      //   console.log("NOW DISCONNECTED USER", disconnectedUser);
+
+      //   console.log("the peerName:", peerName);
+      //   connections.delete(peerName);
+      //   // console.log("initial sessions", sessionsHere);
+
+      //   var connectedUserIDs = Array.from(me.userIDs);
+      //   console.log("connecteduserIDs: ", connectedUserIDs);
+
+      //   if (disconnectedUser !== undefined) {
+      //     console.log("This has been called. User Left");
+      //     event = createEvent("userleft", {
+      //       sessionID: sessionID,
+      //       userID: escapeHTML(disconnectedUser),
+      //       isAdmin:
+      //         usersToPeers.get(escapeHTML(disconnectedUser)) === sessionID,
+      //       locationID: myLocationID,
+      //       // adminLeft: (function () {
+      //       //   if (adminAdmin) {
+      //       //     console.log(`admin-${disconnectedUser}  left`);
+      //       //   } else {
+      //       //     console.log(`${disconnectedUser} left`);
+      //       //   }
+      //       // })(),
+      //       isPrivate: false,
+      //     });
+      //     me.dispatchEvent(event);
+
+      //     let toBelDeleted = peersToUsers.get(peerName);
+      //     console.log("to be deleted=", toBelDeleted);
+      //     peersToUsers.delete(peerName);
+      //     usersToPeers.delete(toBelDeleted);
+
+      //     console.log(
+      //       "peersToUsers map now IN CONNECTION CLOSED=",
+      //       peersToUsers
+      //     );
+      //     console.log(
+      //       "UsersToPeers map now IN CONNECTION CLOSED= ",
+      //       usersToPeers
+      //     );
+
+      //     peer.disconnect();
+      //     // send(makeMessage(MsgType.joinnewgroup, `${sessionID}`));
+      //     // peer.reconnect();
+      //     // connection.reconnect();
+      //     // let newPeer = new Peer();
+      //     // peer.connect();
+
+      //     event = createEvent("newgroup", {
+      //       sessionID: sessionID,
+      //       userID: escapeHTML(disconnectedUser),
+      //       isAdmin:
+      //         usersToPeers.get(escapeHTML(disconnectedUser)) === sessionID,
+      //       locationID: myLocationID,
+      //       // adminLeft: (function () {
+      //       //   if (adminAdmin) {
+      //       //     console.log(`admin-${disconnectedUser}  left`);
+      //       //   } else {
+      //       //     console.log(`${disconnectedUser} left`);
+      //       //   }
+      //       // })(),
+      //       isPrivate: false,
+      //     });
+      //     me.dispatchEvent(event);
+
+      //     console.log("newgroupevent");
+
+      //     // setInterval(() => {
+      //     // send(makeMessage(MsgType.joinnewgroup, `${sessionID}`));
+      //     if (connectedUserIDs.length == 1) {
+      //       peer.reconnect();
+      //     }
+      //   }
+      // }
+
+      // there from the start
       setTimeout(function () {
-        console.log("after 2 seconds.....");
+        //   console.log("after 2 seconds.....");
         connection.close();
       }, 2000);
+      // setTimeout(function () {
+      //   console.log("after 2 seconds.....");
+      //   // group.disconnect();
+      //   connection.close();
+      // }, 2000);
       // group.disconnect();
     }
 
@@ -789,8 +1035,8 @@ class PeerGroup extends EventTarget {
       console.log(peer);
       if (peer.id === sessionID) {
         console.log("ADMINNNNNNNNNNN");
-        console.log("send heartbeat");
-        sendMessageFromAdmin();
+        // console.log("send heartbeat");
+        // sendMessageFromAdmin();it won't work here during reconnection
       }
 
       peer.on("error", function (error) {
@@ -857,20 +1103,22 @@ class PeerGroup extends EventTarget {
           connection.on("error", onError);
 
           if (acceptedUsers.has(newUserID) || !hasJoinRequestListenerAdded) {
+            console.log("ACCEPTED");
             me.acceptUser(newUserID);
           } else {
             connection.on("close", function () {
+              console.log("CLOSEEEEEEEEEEE");
               pending.delete(this.peer);
               peersToUsers.delete(this.peer);
               usersToPeers.delete(escapeHTML(this.label));
             });
             console.log("joinnnnnnn request .......");
-            var event = createEvent("joinrequest", {
-              sessionID: sessionID,
-              userID: escapeHTML(connection.label),
-              isPrivate: true,
-            });
-            me.dispatchEvent(event);
+            // var event = createEvent("joinrequest", {
+            //   sessionID: sessionID,
+            //   userID: escapeHTML(connection.label),
+            //   isPrivate: true,
+            // });
+            // me.dispatchEvent(event);
           }
         });
       });
@@ -918,6 +1166,7 @@ class PeerGroup extends EventTarget {
 
     // this.connect = function (sessionIDToJoin, myUserID) {
     this.connect = function (sessionIDToJoin) {
+      console.log("this . connect=================");
       // console.log("at first sessionIDtoJoin", sessionIDToJoin);
       // console.log("at first userIDtoJoin", myUserID);
       // console.log("abcd is : ", abcd);
@@ -1090,24 +1339,52 @@ class PeerGroup extends EventTarget {
     this.rejectUser = function (remoteUserID) {
       console.log("INSIDE REJECT USER....person to be rejected", remoteUserID);
       rejectedUsers.add(remoteUserID);
+      console.log("REJECTED USERS=", rejectedUsers);
       var peerName = usersToPeers.get(remoteUserID);
-      peersToUsers.delete(peerName);
-      usersToPeers.delete(remoteUserID);
+
+      console.log("peerName of rejectedUser", peerName);
+      // if (peerName === sessionID) {
+      //   console.log("IT IS THE ADMIN TO BE REJECTED");
+      //   console.log("peer +=", peer);
+      //   peer.disconnect();
+      //   console.log("peer disconnect");
+      //   peer.reconnect();
+      //   console.log("peer reconnect");
+      //   return;
+      // } else {
+      // //WE NEED TO  COMMENT INORDER TO WORK
+      // peersToUsers.delete(peerName);
+      // usersToPeers.delete(remoteUserID);
+
+      console.log("reject user : peersToUsers", peersToUsers);
+      console.log("reject user : usersToPeers", usersToPeers);
 
       var connection = pending.get(peerName);
       if (connection === undefined) {
+        console.log("undefined connection", connection);
         connection = connections.get(peerName);
       }
+      console.log("connection to close", connection);
+      // setTimeout(() => {
+      //   connection.close();
+      // }, 2000);
+      // connection.close();
       if (connection !== undefined) {
         console.log("initiating banned from sess");
         rejectConnection(
           connection,
           ErrorType.PROHIBITED,
-          `You've been banned from the session "${sessionID}".`
+          `You've been banned from the session "${sessionID}".`,
+          peerName
         );
       }
-
-      console.log("AFTER REJECT USER........................");
+      //   console.log("wohooooooooooooo");
+      // }
+      // if (peerName === sessionID) {
+      //   peer.disconnect();
+      // }
+      // }
+      // console.log("AFTER REJECT USER........................");
     };
 
     /**	Sends a message to all members of the peer group.
@@ -1152,12 +1429,119 @@ class PeerGroup extends EventTarget {
       }
     };
 
+    // this.checkAdminMessageReceived = function (adminID) {
+    //   adminMessageReceived.set(adminID, Date.now());
+    //   const intervalID = setInterval(() => {
+    //     if (!activeIntervals.has(intervalID)) {
+    //       activeIntervals.add(intervalID);
+    //       console.log(`${intervalID} has been added...`);
+    //     }
+
+    //     const currentTime = Date.now();
+    //     const lastReceivedTime = adminMessageReceived.get(adminID);
+    //     console.log("LASTTTTTTTTTT RECEIVED TIME", lastReceivedTime);
+    //     if (lastReceivedTime && currentTime - lastReceivedTime > 10000) {
+    //       console.log(
+    //         "ADMIN ADMIN ADMIN LEFT================================="
+    //       );
+    //       console.log(`ID ${adminID} not received in the last 10 seconds.`);
+    //       clearInterval(intervalID);
+    //       activeIntervals.delete(intervalID);
+    //       console.log("active int", activeIntervals);
+    //       console.log("active int size", activeIntervals.size);
+    //       if (activeIntervals.size === 0) {
+    //         console.log(`All intervals are cleared at ${Date.now()}`);
+    //         group.rejectUser(adminID);
+    //       }
+
+    //       // group.rejectUser(adminID);
+    //     } else {
+    //       console.log(`${adminID} ADMIN IS PRESENT at ${currentTime}`);
+    //     }
+    //   }, 5000);
+    // };
+
+    this.checkAdminMessageReceived = function (adminID) {
+      adminMessageReceived.set(adminID, Date.now());
+      if (!activeIntervals.has(adminID)) {
+        // adminMessageReceived.set(adminID, Date.now());
+        console.log(adminMessageReceived);
+        // console.log("adminMessageReceived=", adminMessageReceived);
+
+        const intervalID = setInterval(() => {
+          const currentTime = Date.now();
+          const lastReceivedTime = adminMessageReceived.get(adminID);
+          console.log("LASTTTTTTTTTT RECEIVED TIME", lastReceivedTime);
+          if (lastReceivedTime && currentTime - lastReceivedTime > 10000) {
+            console.log(
+              "ADMIN ADMIN ADMIN LEFT================================="
+            );
+            console.log(`ID ${adminID} not received in the last 10 seconds.`);
+            // group.sendPrivateAdmin(event.userID, "received......");
+            // send(makeMessage(MsgType.rejecting, `${adminID}`));
+            // send(makeMessage(MsgType.ADMIN_REJECTION, `${adminID}`));
+            // group.rejectUser(adminID);
+            // Clear the interval when the condition is met
+            // clearInterval(intervalID);
+            // console.log("clear INTERVALLLLLLLLLLL======");
+            // send(makeMessage(MsgType.ADMIN_REJECTION, `${adminID}`));
+            // send(makeMessage(MsgType.rejecting, `${adminID}`));
+            // group.rejectUser(adminID);
+            // group.sendPrivateAdmin(event.userID, "received......")
+            // adminMessageReceived.delete(adminID);
+            console.log("CLEARING INTERVAL....", intervalID);
+            // group.rejectUser(adminID);
+            // clearInterval(intervalID);
+            // activeIntervals.delete(adminID);
+            clearAdminInterval(adminID, intervalID);
+            // group.rejectUser(adminID);
+            // console.log("clear INTERVALLLLLLLLLLL======");
+          } else {
+            console.log(`${adminID} ADMIN IS PRESENT`);
+          }
+        }, 5000);
+        activeIntervals.add(adminID);
+        console.log("Interval started for admin", adminID);
+        console.log("Interval ID is =", intervalID);
+        // console.log("acive intervals", activeIntervals);
+      }
+      console.log("acive intervals", activeIntervals);
+    };
+    function clearAdminInterval(adminID, intervalID) {
+      if (activeIntervals.has(adminID)) {
+        // clearInterval(activeIntervals.get(adminID));
+        clearInterval(intervalID);
+        adminMessageReceived.delete(adminID);
+        console.log("active intervals", activeIntervals);
+
+        activeIntervals.delete(adminID);
+        const currentTime = new Date();
+
+        const hours = currentTime.getHours();
+        const minutes = currentTime.getMinutes();
+        const seconds = currentTime.getSeconds();
+
+        console.log(`Current time: ${hours}:${minutes}:${seconds}`);
+        console.log("Interval cleared for admin", adminID);
+
+        // send(makeMessage(MsgType.rejecting, `${adminID}`));
+        // return send(makeMessage(MsgType.ADMIN_REJECTION, `${adminID}`));
+        console.log("REJECT USER WILL BE EXECUTED FOR REMAINING CLIENTS");
+        // return send(makeMessage(MsgType.ADMIN_REJECTION, `${adminID}`));
+        group.rejectUser(adminID);
+        // console.log("rejection done ..........!!!!!!!!!!!!!!!!");
+      }
+    }
+
     this.receiveID = function (myid) {
       console.log("user id received = ", myid);
       console.log("HOLD");
-      // setInterval(() => {
+
+      // let intervalID=setInterval(() => {
       // const myid = /* obtain your ID here */;
+      // if (!userActiveIntervals.has(myid)) {
       checkUsers(myid);
+      // }
       // }, 5000);
       // checkUsers(myid);
     };
@@ -1173,65 +1557,173 @@ class PeerGroup extends EventTarget {
     // };
 
     function checkUsers(myid) {
-      personsInTheGroup = Array.from(me.userIDs);
+      // if (!userActiveIntervals.has(myid)) {
+      // const intervalID = setInterval(() => {
+      // const currentTime=Date.now()
 
+      console.log("myid=", myid);
+
+      personsInTheGroup = Array.from(me.userIDs);
       console.log("peersToUsers", peersToUsers);
       console.log("usersToPeers", usersToPeers);
-
       robots.set(myid, Date.now());
+
       console.log("robots now", robots);
 
-      // robots.set(myid, 0);
-      const currentTime = Date.now();
+      if (!userActiveIntervals.has(myid)) {
+        const intervalID = setInterval(() => {
+          personsInTheGroup.forEach((personID) => {
+            const lastReceivedTime = robots.get(personID);
+            const currentTime = Date.now();
+            console.log("curr time", currentTime);
+            console.log(
+              "LAST =================================",
+              lastReceivedTime
+            );
 
-      personsInTheGroup.forEach((personID) => {
-        const lastReceivedTime = robots.get(personID);
-        console.log("LAST =================================", lastReceivedTime);
+            if (lastReceivedTime && currentTime - lastReceivedTime > 10000) {
+              console.log("XLXLXLXLXLXL=================================");
+              console.log(
+                `ID ${personID} not received in the last 10 seconds.`
+              );
+              console.log(usersToPeers, personID);
+              let thePeerId = usersToPeers.get(personID);
+              console.log("the peer id=", thePeerId);
 
-        if (lastReceivedTime && currentTime - lastReceivedTime > 10000) {
-          console.log("XLXLXLXLXLXL=================================");
-          console.log(`ID ${personID} not received in the last 10 seconds.`);
-          console.log(usersToPeers, personID);
-          let thePeerId = usersToPeers.get(personID);
-          console.log("the peer id=", thePeerId);
+              clearUserActiveIntervals(personID, intervalID);
 
-          send(makeMessage(MsgType.rejecting, `${personID}`));
-          // connection.send(makeMessage(MsgType.PRIVATE_MSG, data))
+              // send(makeMessage(MsgType.rejecting, `${personID}`)); //for other members
+              // connection.send(makeMessage(MsgType.PRIVATE_MSG, data))
 
-          // group.rejectUser(personID);
-          // const xyz = new Peer(thePeerId);
-          // xyz.disconnect();
-          group.rejectUser(personID);
-          console.log("reject user executed..");
-        } else {
-          console.log(`ID ${personID} is present`);
-        }
-      });
-
-      // setInterval(() => {
-      //   const myid = /* obtain your ID here */;
-      //   checkUsers(myid);
-      // }, 5000);
-
-      // console.log("me.....", me.userIDs);
-      // if (personsInTheGroup.includes(myid)) {
-      //   console.log("okkkk");
-      // }
-      // console.log("robots", robots);
-
-      // setInterval(()=>{
-      //   robots.set(myid, 1)
-      //   console.log('robots after 9 sec',)
-      // },9000)
-
-      // setInterval(() => {
-
-      // }, 8000);
-      // console.log("johohoo", userIDs);
-      // console.log("checking users arr", personsInTheGroup);
-
-      // console.log("heartbeat status..=================", heartbeatStatus);
+              // group.rejectUser(personID); //for admin
+              // const xyz = new Peer(thePeerId);
+              // xyz.disconnect();
+              // clearInterval(intervalID);
+              // group.rejectUser(personID);
+              // robots.delete(personID);
+              console.log("reject user executed..", robots);
+            } else {
+              console.log(`ID ${personID} is present`);
+            }
+          });
+        }, 3000);
+        userActiveIntervals.add(myid);
+        console.log("user acive intervals", userActiveIntervals);
+      }
     }
+    // personsInTheGroup.forEach((personID) => {
+    //   const lastReceivedTime = robots.get(personID);
+    //   console.log(
+    //     "LAST =================================",
+    //     lastReceivedTime
+    //   );
+
+    //   if (lastReceivedTime && currentTime - lastReceivedTime > 10000) {
+    //     console.log("XLXLXLXLXLXL=================================");
+    //     console.log(`ID ${personID} not received in the last 10 seconds.`);
+    //     console.log(usersToPeers, personID);
+    //     let thePeerId = usersToPeers.get(personID);
+    //     console.log("the peer id=", thePeerId);
+
+    //     clearUserActiveIntervals(personID, intervalID);
+
+    //     // send(makeMessage(MsgType.rejecting, `${personID}`)); //for other members
+    //     // connection.send(makeMessage(MsgType.PRIVATE_MSG, data))
+
+    //     // group.rejectUser(personID); //for admin
+    //     // const xyz = new Peer(thePeerId);
+    //     // xyz.disconnect();
+    //     // clearInterval(intervalID);
+    //     // group.rejectUser(personID);
+    //     // robots.delete(personID);
+    //     console.log("reject user executed..", robots);
+    //   } else {
+    //     console.log(`ID ${personID} is present`);
+    //   }
+    // });
+
+    //   console.log("INTERVAL ID", intervalID);
+    // }, 5000);
+    // userActiveIntervals.add(myid);
+    // console.log("userac", userActiveIntervals);
+
+    function clearUserActiveIntervals(personID, intervalID) {
+      const currentTime = new Date();
+
+      const hours = currentTime.getHours();
+      const minutes = currentTime.getMinutes();
+      const seconds = currentTime.getSeconds();
+
+      console.log(`Current time: ${hours}:${minutes}:${seconds}`);
+      // clearInterval()
+      // group.rejectUser(personID);
+      // userActiveIntervals.delete(personID);
+      robots.delete(personID);
+      userActiveIntervals.delete(personID);
+      clearInterval(intervalID);
+      send(makeMessage(MsgType.rejecting, `${personID}`)); //for other members
+      group.rejectUser(personID);
+
+      console.log("NOW USER ACTIVE INTERVALS", userActiveIntervals);
+      console.log("ROBOTS=", robots);
+    }
+
+    // })
+    // personsInTheGroup = Array.from(me.userIDs);
+
+    // console.log("peersToUsers", peersToUsers);
+    // console.log("usersToPeers", usersToPeers);
+
+    // robots.set(myid, Date.now());
+    // console.log("robots now", robots);
+
+    // robots.set(myid, 0);
+    // const currentTime = Date.now();
+
+    // personsInTheGroup.forEach((personID) => {
+    //   const lastReceivedTime = robots.get(personID);
+    //   console.log("LAST =================================", lastReceivedTime);
+
+    //   if (lastReceivedTime && currentTime - lastReceivedTime > 10000) {
+    //     console.log("XLXLXLXLXLXL=================================");
+    //     console.log(`ID ${personID} not received in the last 10 seconds.`);
+    //     console.log(usersToPeers, personID);
+    //     let thePeerId = usersToPeers.get(personID);
+    //     console.log("the peer id=", thePeerId);
+
+    //     send(makeMessage(MsgType.rejecting, `${personID}`)); //for other members
+    //     // connection.send(makeMessage(MsgType.PRIVATE_MSG, data))
+
+    //     // group.rejectUser(personID); //for admin
+    //     // const xyz = new Peer(thePeerId);
+    //     // xyz.disconnect();
+    //     group.rejectUser(personID);
+    //     robots.delete(personID);
+    //     console.log("reject user executed..", robots);
+    //   } else {
+    //     console.log(`ID ${personID} is present`);
+    //   }
+    // });
+
+    // console.log("me.....", me.userIDs);
+    // if (personsInTheGroup.includes(myid)) {
+    //   console.log("okkkk");
+    // }
+    // console.log("robots", robots);
+
+    // setInterval(()=>{
+    //   robots.set(myid, 1)
+    //   console.log('robots after 9 sec',)
+    // },9000)
+
+    // setInterval(() => {
+
+    // }, 8000);
+    // console.log("johohoo", userIDs);
+    // console.log("checking users arr", personsInTheGroup);
+
+    // console.log("heartbeat status..=================", heartbeatStatus);
+    // }
 
     /**	The set of all user IDs belonging to peers currently in the peer group.
      */
@@ -1251,6 +1743,7 @@ class PeerGroup extends EventTarget {
     });
 
     // this.acknow = function () {
+    //   send(makeMessage(MsgType.ACKNOWLEDGED, "acknowwwl"));
     //   send(makeMessage(MsgType.ACKNOWLEDGED, "acknowwwl"));
     // };
 
