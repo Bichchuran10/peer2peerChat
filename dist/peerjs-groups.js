@@ -196,6 +196,7 @@ class PeerGroup extends EventTarget {
     const activeIntervals = new Set();
     var adminMessageReceived = new Map();
     var userActiveIntervals = new Set();
+    var activeAdminIntervals = new Map();
     //
 
     /**	Describes the type of content contained in a message sent between peers.
@@ -1016,7 +1017,7 @@ class PeerGroup extends EventTarget {
     }
 
     /**	Configures this peer to act as the peer group leader. */
-    function createSession() {
+    async function createSession() {
       if (peer !== undefined) {
         console.log(
           " create Session peer not undefined then hellooo peer",
@@ -1035,6 +1036,10 @@ class PeerGroup extends EventTarget {
       console.log(peer);
       if (peer.id === sessionID) {
         console.log("ADMINNNNNNNNNNN");
+        console.log(
+          "ADMIN PUBLICROOMS=================================HAHAHHAHAHA"
+        );
+        console.log("location", myLocationID);
         // console.log("send heartbeat");
         // sendMessageFromAdmin();it won't work here during reconnection
       }
@@ -1048,10 +1053,56 @@ class PeerGroup extends EventTarget {
         }
       });
 
-      peer.on("open", function () {
+      peer.on("open", async function () {
         console.log("connnectttt now for id ", peer.id);
         connected(peer.id);
         console.log("peer opennnn for id ", peer.id);
+        console.log(
+          "ONLY RUNS FOR THE ADMIN. EVEN IN RECONNECTION. SO WE NEED TO MAKE THE API CALL TO THE SERVER HERE!"
+        );
+
+        // if(admin)
+        if (myLocationID) {
+          console.log(
+            "location is present that means it is a public room",
+            myLocationID
+          );
+          if (!activeAdminIntervals.has(sessionID)) {
+            // activeAdminIntervals.add(userID);
+            activeAdminIntervals[sessionID] = userID;
+            console.log("activeAdminIntervals", activeAdminIntervals);
+            const intervalID = setInterval(async () => {
+              try {
+                //we will make the api call here
+
+                console.log("trying to make the call......");
+                const url = `http://localhost:9000/adminpresent?username=${encodeURIComponent(
+                  myUserID
+                )}&mylocation=${myLocationID}&roomid=${encodeURIComponent(
+                  sessionID
+                )}`;
+
+                const response = await fetch(url);
+
+                console.log("api called!!");
+                // console.log("the res :=", response);
+
+                console.log("the res :=", response);
+
+                if (!response.ok) {
+                  throw new Error("Network response was not ok");
+                }
+                const responseData = await response.json();
+                console.log("Server response:", responseData);
+              } catch (error) {
+                console.error("Error sending data to server:", error);
+                // Handle the error or return a default value if needed
+                return null;
+              }
+            }, 3000);
+            console.log("activeAdminIntervals", activeAdminIntervals);
+          }
+        }
         sessionEntered();
       });
 

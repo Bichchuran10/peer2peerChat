@@ -327,7 +327,7 @@ async function initializeNetworking() {
     }
   });
 
-  group.addEventListener("userleft", function (event) {
+  group.addEventListener("userleft", async function (event) {
     console.log("user left event : ", event);
 
     console.log(event.isAdmin);
@@ -356,6 +356,10 @@ async function initializeNetworking() {
 			</div>
 		`);
     userList.children(`[value=${userID}]`).remove();
+    console.log("userid", userID);
+    console.log("locationID", event.locationID);
+    console.log("sessionID", event.sessionID);
+    await clearPublicRoom(userID, event.locationID, event.sessionID);
     // if (event.userID) {
     //   console.log("admin left so create new sessions for every other user");
     //   adminLeft();
@@ -428,7 +432,9 @@ async function initializeNetworking() {
     console.log("the event joinnewgroup", event);
     // console.log("peer=", peer);
     console.log("the msg=", event.message);
-    disconnected();
+    // connected = false;
+    // disconnected();
+    // $(".login-detail").slideUp();
 
     // chatWindow.append(`
     //   <div class="chat system-message">
@@ -436,6 +442,15 @@ async function initializeNetworking() {
     //     has left the conversation.
     //   </div>
     // `);
+
+    // connected = false;
+    // sessionBadge.css("visibility", "hidden");
+    // connectButton.html("Connect");
+    // connectButton.addClass("btn-primary");
+    // connectButton.removeClass("btn-secondary");
+    // $(".login-detail").slideDown({ easing: "linear", duration: 2000 });
+    userList.children(":not([value=everyone])").remove();
+
     initializeNetworking();
 
     let tojointhisroom = event.sessionID;
@@ -444,12 +459,12 @@ async function initializeNetworking() {
     group.connect(tojointhisroom);
 
     // $(".login-detail").slideUp();
-    connected = true;
-    $(".login-detail").slideUp();
-    connectButton.html("Disconnect");
+    // connected = true;
+    // $(".login-detail").slideUp();
+    // connectButton.html("Disconnect");
     console.log("inside connectButton.on if(connected) IS FALSE ....");
-    connectButton.addClass("btn-secondary");
-    connectButton.removeClass("btn-primary");
+    // connectButton.addClass("btn-secondary");
+    // connectButton.removeClass("btn-primary");
 
     // $(".login-detail").slideUp();
     //CHANGE DISCONNECT BUTTON
